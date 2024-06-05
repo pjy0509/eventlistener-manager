@@ -3,6 +3,8 @@ import {AddEventListenerOptionsOrBoolean, EventHandlersEventMaps, EventListenerE
 import {ExtendedMouseEvent, ExtendedTouchEvent} from "./event";
 import {EventPath, EventPathList, EventPosition, PathDirection} from "./geometry";
 
+export { EventPath, EventPathList, EventPosition, PathDirection, ExtendedMouseEvent, ExtendedTouchEvent };
+
 (() => {
     if (typeof window !== 'undefined' && typeof window.TouchEvent === 'undefined') {
         class TouchEvent extends UIEvent {
