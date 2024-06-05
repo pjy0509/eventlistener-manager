@@ -1,25 +1,22 @@
 {
   "name": "eventlistener-manager",
-  "version": "1.0.4",
-  "description": "junyoung_park",
+  "version": "1.0.13",
+  "description": "The EventManager is capable of handling both native and custom events seamlessly, providing a robust solution for event management in complex applications.",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "rm -fr dist/* && tsc -p tsconfig.json && tsc -p tsconfig-cjs.json && ./fixup.sh"
+    "build": "node build.js"
   },
   "author": "",
   "license": "MIT",
   "type": "module",
-  "main": "dist/cjs/index.js",
-  "module": "dist/mjs/index.js",
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/mjs/index.js",
-      "require": "./dist/cjs/index.js"
-    },
-    "./*": {
-      "require": "./dist/cjs/*.js",
-      "import": "./dist/esm/*.js"
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
     }
   },
   "repository": {
@@ -38,6 +35,8 @@
     "typescript"
   ],
   "devDependencies": {
+    "esbuild": "^0.21.4",
+    "glob": "^10.4.1",
     "typescript": "^5.4.5"
   }
 }
