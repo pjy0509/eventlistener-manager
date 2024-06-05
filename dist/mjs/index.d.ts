@@ -1,4 +1,4 @@
-import { EventHandlersEventMaps, EventManagerInstance } from "./interfacecs";
+import { AddEventListenerOptionsOrBoolean, EventHandlersEventMaps, EventManagerInstance } from "./interfacecs";
 import { ExtendedMouseEvent, ExtendedTouchEvent } from "./event";
 import { EventPath, EventPathList, EventPosition, PathDirection } from "./geometry";
 export declare class EventManager {
@@ -12,7 +12,7 @@ export declare class EventManager {
     };
     static passiveSupported: boolean;
     static onceSupported: boolean;
-    static add(target: EventTarget, types: EventHandlersEventMaps, callback: EventListenerOrEventListenerObject, options?: EventListenerOptions): void;
+    static add(target: EventTarget, types: EventHandlersEventMaps, callback: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean): void;
     private static extendedEventKey;
     private static addExtendedEventListener;
     static remove(target: EventTarget, types?: EventHandlersEventMaps, callback?: EventListenerOrEventListenerObject): void;

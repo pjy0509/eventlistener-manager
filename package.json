@@ -1,13 +1,13 @@
 {
   "name": "eventlistener-manager",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "junyoung_park",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "rm -fr dist/* && tsc -p tsconfig.json && tsc -p tsconfig-cjs.json && ./fixup.sh"
   },
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "type": "module",
   "main": "dist/cjs/index.js",
   "module": "dist/mjs/index.js",
@@ -16,12 +16,25 @@
     ".": {
       "import": "./dist/mjs/index.js",
       "require": "./dist/cjs/index.js"
-    }
+    },
+    "./dist/mjs": "./dist/mjs/index.js",
+    "./dist/cjs": "./dist/cjs/index.js"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/pjy0509/eventlistener-manager"
   },
+  "keywords": [
+    "event",
+    "eventlistener",
+    "listener",
+    "gesture",
+    "longpress",
+    "pan",
+    "pinch",
+    "javascript",
+    "typescript"
+  ],
   "devDependencies": {
     "typescript": "^5.4.5"
   }

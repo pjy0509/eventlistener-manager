@@ -5,6 +5,16 @@ const utils_1 = require("./utils");
 const interfacecs_1 = require("./interfacecs");
 const event_1 = require("./event");
 const geometry_1 = require("./geometry");
+(() => {
+    if (typeof window !== 'undefined' && typeof window.TouchEvent === 'undefined') {
+        class TouchEvent extends UIEvent {
+            constructor(type, init) {
+                super(type, init);
+            }
+        }
+        window.TouchEvent = TouchEvent;
+    }
+})();
 // class
 const scheduler = new utils_1.TaskScheduler(5);
 class EventManager {

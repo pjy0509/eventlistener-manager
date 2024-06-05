@@ -11,9 +11,6 @@ interface ExtendedMouseEventMap {
     'mousepandown': MouseEvent;
     'mousepanend': MouseEvent;
     'mousepanleave': MouseEvent;
-    'dblclick': MouseEvent;
-    'trpclick': MouseEvent;
-    'qudclick': MouseEvent;
 }
 interface ExtendedTouchEventMap {
     'touchlongpressstart': TouchEvent;
@@ -32,9 +29,6 @@ interface ExtendedTouchEventMap {
     'touchpinchmove': TouchEvent;
     'touchpinchend': TouchEvent;
     'touchpinchcancel': TouchEvent;
-    'dbltouch': TouchEvent;
-    'trptouch': TouchEvent;
-    'qudtouch': TouchEvent;
 }
 export interface ExtendedEventMap extends ExtendedMouseEventMap, ExtendedTouchEventMap {
 }
@@ -44,6 +38,7 @@ export type ExtendedEventType = 'mouselongpress' | 'mousepan' | 'multiclick' | '
 type HTMLElementEventKey = keyof HTMLElementEventMap;
 type ExtendedEventKey = keyof ExtendedEventMap;
 type ExtendedHTMLElementEventKey = keyof Partial<ExtendedHTMLElementEventMap>;
+export type AddEventListenerOptionsOrBoolean = AddEventListenerOptions | boolean;
 export type EventHandlersEventMaps = ExtendedHTMLElementEventKey | ExtendedHTMLElementEventKey[];
 export type EventListenerEventMap = Map<EventHandlersEventMaps, EventListenerOrEventListenerObject[]>;
 export type ExtendedEventImplementation = Partial<{

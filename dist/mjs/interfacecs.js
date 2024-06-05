@@ -11,9 +11,6 @@ const extendedMouseEventMap = {
     'mousepandown': 'mousepan',
     'mousepanend': 'mousepan',
     'mousepanleave': 'mousepan',
-    'dblclick': 'multiclick',
-    'trpclick': 'multiclick',
-    'qudclick': 'multiclick',
 };
 const extendedTouchEventMap = {
     'touchlongpressstart': 'touchlongpress',
@@ -32,9 +29,6 @@ const extendedTouchEventMap = {
     'touchpinchmove': 'touchpinch',
     'touchpinchend': 'touchpinch',
     'touchpinchcancel': 'touchpinch',
-    'dbltouch': 'multitouch',
-    'trptouch': 'multitouch',
-    'qudtouch': 'multitouch',
 };
 export const extendedEventMap = {
     ...extendedMouseEventMap,

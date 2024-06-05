@@ -2,6 +2,16 @@ import { DefaultGesturePreventer, EventType, TaskScheduler } from "./utils";
 import { extendedEventMap } from "./interfacecs";
 import { ExtendedMouseEvent, ExtendedTouchEvent } from "./event";
 import { EventPath, EventPathList, EventPosition, PathDirection } from "./geometry";
+(() => {
+    if (typeof window !== 'undefined' && typeof window.TouchEvent === 'undefined') {
+        class TouchEvent extends UIEvent {
+            constructor(type, init) {
+                super(type, init);
+            }
+        }
+        window.TouchEvent = TouchEvent;
+    }
+})();
 // class
 const scheduler = new TaskScheduler(5);
 export class EventManager {
