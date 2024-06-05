@@ -17,8 +17,10 @@
       "import": "./dist/mjs/index.js",
       "require": "./dist/cjs/index.js"
     },
-    "./dist/mjs": "./dist/mjs/index.js",
-    "./dist/cjs": "./dist/cjs/index.js"
+    "./*": {
+      "require": "./dist/cjs/*.js",
+      "import": "./dist/esm/*.js"
+    }
   },
   "repository": {
     "type": "git",
