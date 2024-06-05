@@ -1,0 +1,28 @@
+{
+  "name": "eventlistener-manager",
+  "version": "1.0.2",
+  "description": "junyoung_park",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "rm -fr dist/* && tsc -p tsconfig.json && tsc -p tsconfig-cjs.json && ./fixup.sh"
+  },
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "main": "dist/cjs/index.js",
+  "module": "dist/mjs/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/mjs/index.js",
+      "require": "./dist/cjs/index.js"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pjy0509/eventlistener-manager"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}
