@@ -14,7 +14,7 @@ cdn
 
 ## Report errors and suggestions
 
-### [Gmail](mailto:qkrwnss0509@gmail.com?subject=Report errors and suggestions)
+### [Gmail](mailto:qkrwnss0509@gmail.com?subject=Report_errors_and_suggestions)
 
 ## 1. Add events
 #### Add single type event
