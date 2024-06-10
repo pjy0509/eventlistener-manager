@@ -1,6 +1,7 @@
 # Eventlistener Manager
 
-## [Sample](https://pjy0509.github.io/example/eventlistener-manager/)
+## Sample page
+### [Link](https://pjy0509.github.io/example/eventlistener-manager/)
 
 ## Install
 npm
