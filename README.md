@@ -12,6 +12,10 @@ cdn
 <script src="https://unpkg.com/eventlistener-manager/dist/index.umd.js"></script>
 ```
 
+## Report errors and suggestions
+
+### [Gmail](mailto:qkrwnss0509@gmail.com?subject=Report errors and suggestions)
+
 ## 1. Add events
 #### Add single type event
 ```typescript
