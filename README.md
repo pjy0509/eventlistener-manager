@@ -2,33 +2,57 @@
 
 ## [Sample](https://pjy0509.github.io/example/eventlistener-manager/)
 
+## Install
+npm
+```bash
+npm i eventlistener-manager
+```
+cdn
+```html
+<script src="https://unpkg.com/eventlistener-manager/dist/index.umd.js"></script>
+```
+
 ## 1. Add events
 #### Add single type event
 ```typescript
 EventManager.add(eventTarget, 'click', callback);
+// or
+eventTarget.addManagedEventListener('click', callback);
 ``` 
 #### Add multiple type event
 ```typescript
 EventManager.add(eventTarget, ['click', 'mousedown'], callback);
+// or
+eventTarget.addManagedEventListener(['click', 'mousedown'], callback);
 ``` 
 ## 2. Remove event
 #### Remove single type event
 ```typescript
 EventManager.remove(eventTarget, 'click', callback);
+// or
+eventTarget.removeManagedEventListener('click', callback);
 ``` 
 ```typescript
 EventManager.remove(eventTarget, 'click'); // remove all click event
+// or
+eventTarget.removeManagedEventListener('click');
 ``` 
 ```typescript
 EventManager.remove(eventTarget); // remove all event
+// or
+eventTarget.removeManagedEventListener();
 ``` 
 #### Remove multiple type event
 ```typescript
 EventManager.add(eventTarget, ['click', 'mousedown']); // remove all click, mousedown event
+// or
+eventTarget.removeManagedEventListener(['click', 'mousedown']);
 ``` 
 ## 3. Add custom event
 ```typescript
 EventManager.add(eventTarget, ['mouselongpressstart'], callback);
+// or
+eventTarget.addManagedEventListener(['mouselongpressstart']);
 ``` 
 ### Supported custom events
 Supported custom events include mouse long press, mouse pan, touch long press, touch pan, and touch pinch.
@@ -83,7 +107,7 @@ EventManager.options.touchLongpressBelowDistance = 30; // Touch long press below
 ```typescript
 EventManager.add(eventTarget, 'fullscreenchange', callback);
 
-// This actually works as follows: eventTarget.addEventListener('mozfullscreenchange', callback);
+// This actually works on firefox with specific version as follows: eventTarget.addEventListener('mozfullscreenchange', callback);
 ```
 ### Additional Information
 

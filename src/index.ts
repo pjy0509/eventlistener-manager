@@ -821,7 +821,9 @@ export class EventManager {
     }
 }
 
-(function () {
+
+
+(() => {
     try {
         const empty = () => {
         };
@@ -844,24 +846,37 @@ export class EventManager {
         window.removeEventListener('test', empty, options);
     } catch (e) {
     }
-})();
 
-(window as any).EventManager = EventManager;
-(window as any).ExtendedMouseEvent = ExtendedMouseEvent;
-(window as any).ExtendedTouchEvent = ExtendedTouchEvent;
-(window as any).PathDirection = PathDirection;
-(window as any).EventPosition = EventPosition;
-(window as any).EventPath = EventPath;
-(window as any).EventPathList = EventPathList;
+    (window as any).EventManager = EventManager;
+    (window as any).EventPath = EventPath;
+    (window as any).EventPathList = EventPathList;
+    (window as any).EventPosition = EventPosition;
+    (window as any).PathDirection = PathDirection;
+    (window as any).ExtendedMouseEvent = ExtendedMouseEvent;
+    (window as any).ExtendedTouchEvent = ExtendedTouchEvent;
+
+    Element.prototype.addManagedEventListener = function (types: EventHandlersEventMaps, callback: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean) {
+        EventManager.add(this, types, callback, options);
+    };
+
+    Element.prototype.removeManagedEventListener = function (types?: EventHandlersEventMaps, callback?: EventListenerOrEventListenerObject) {
+        EventManager.remove(this, types, callback);
+    };
+})();
 
 declare global {
     interface Window {
-        EventManager: EventManager
-        ExtendedMouseEvent: ExtendedMouseEvent
-        ExtendedTouchEvent: ExtendedTouchEvent
-        PathDirection: PathDirection
-        EventPosition: EventPosition
-        EventPath: EventPath
-        EventPathList: EventPathList
+        EventManager: EventManager;
+        ExtendedMouseEvent: ExtendedMouseEvent;
+        ExtendedTouchEvent: ExtendedTouchEvent;
+        PathDirection: PathDirection;
+        EventPosition: EventPosition;
+        EventPath: EventPath;
+        EventPathList: EventPathList;
+    }
+    
+    interface EventTarget {
+        addManagedEventListener: (types: EventHandlersEventMaps, callback: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean) => void;
+        removeManagedEventListener: (types?: EventHandlersEventMaps, callback?: EventListenerOrEventListenerObject) => void;
     }
 }

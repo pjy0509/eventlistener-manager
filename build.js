@@ -21,9 +21,15 @@ Promise.all([
 		...baseConfig,
 		format: 'cjs',
 		outExtension: { '.js': '.cjs' }
+	}),
+	esbuild.build({
+		...baseConfig,
+		format: 'iife',
+		globalName: 'EventListenerManager',
+		outExtension: { '.js': '.umd.js' }
 	})
 ]).then(() => {
-	exec(`tsc --project ${tsConfig} --emitDeclarationOnly --declaration --outDir dist`, (err, stdout, stderr) => {
+	exec(`tsc --project ${tsConfig} --emitDeclarationOnly --declaration --outDir ${baseConfig.outdir}`, (err, stdout, stderr) => {
 		if (err) {
 			console.error(`Error: ${stderr}`);
 			process.exit(1);
