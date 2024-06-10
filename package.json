@@ -1,6 +1,6 @@
 {
   "name": "eventlistener-manager",
-  "version": "1.0.23",
+  "version": "1.0.24",
   "description": "The EventManager is capable of handling both native and custom events seamlessly, providing a robust solution for event management in complex applications.",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -26,6 +26,7 @@
     "type": "git",
     "url": "https://github.com/pjy0509/eventlistener-manager"
   },
+  "homepage": "https://pjy0509.github.io/example/eventlistener-manager/",
   "keywords": [
     "event",
     "eventlistener",
