@@ -1,6 +1,6 @@
 {
   "name": "eventlistener-manager",
-  "version": "1.0.24",
+  "version": "1.0.25",
   "description": "The EventManager is capable of handling both native and custom events seamlessly, providing a robust solution for event management in complex applications.",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",

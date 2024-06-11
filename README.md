@@ -1,8 +1,6 @@
 # Eventlistener Manager
-
 ## Sample page
 ### [Link](https://pjy0509.github.io/example/eventlistener-manager/)
-
 ## Install
 npm
 ```bash
@@ -12,11 +10,12 @@ cdn
 ```html
 <script src="https://unpkg.com/eventlistener-manager/dist/index.umd.js"></script>
 ```
-
 ## Report errors and suggestions
-
 ### [Gmail](mailto:qkrwnss0509@gmail.com?subject=Report_errors_and_suggestions)
-
+## Change log
+| version | log         |
+|---------|-------------|
+| 1.0.25  | Support CDN |
 ## 1. Add events
 #### Add single type event
 ```typescript
@@ -115,7 +114,6 @@ EventManager.add(eventTarget, 'fullscreenchange', callback);
 // This actually works on firefox with specific version as follows: eventTarget.addEventListener('mozfullscreenchange', callback);
 ```
 ### Additional Information
-
 -   The EventManager supports polyfills for various event types to ensure cross-browser compatibility.
 -   The `strict` mode in options ensures that the callback is invoked in a strict manner according to the specified requirements.
 -   The EventManager is capable of handling both native and custom events seamlessly, providing a robust solution for event management in complex applications.
