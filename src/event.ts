@@ -1,4 +1,5 @@
-import {EventPath, EventPathList} from "./geometry";
+import {EventPath, EventPathList, Size} from "./geometry";
+import {ExtendedUIEventProperty} from "./interfacecs";
 
 class CloneEventInit {
     static clone<T extends EventInit>(event: Event): T {
@@ -21,5 +22,14 @@ export class ExtendedTouchEvent extends TouchEvent {
     constructor(type: string, event: Event, paths: EventPath[] = []) {
         super(type, CloneEventInit.clone(event));
         this.paths = new EventPathList(paths);
+    }
+}
+
+export class ExtendedUIEvent<T extends ExtendedUIEventProperty> extends UIEvent {
+    appearance: T;
+
+    constructor(type: string, event: Event, appearance: T) {
+        super(type, CloneEventInit.clone(event));
+        this.appearance = appearance;
     }
 }

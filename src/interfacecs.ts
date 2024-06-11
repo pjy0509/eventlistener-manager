@@ -35,7 +35,13 @@ interface ExtendedTouchEventMap {
     'touchpinchcancel': TouchEvent;
 }
 
-export interface ExtendedEventMap extends ExtendedMouseEventMap, ExtendedTouchEventMap {
+interface ExtendedUIEventMap {
+    'appearancechange': MediaQueryListEvent;
+    'orientationchange': MediaQueryListEvent;
+    'resize': UIEvent;
+}
+
+export interface ExtendedEventMap extends ExtendedMouseEventMap, ExtendedTouchEventMap, ExtendedUIEventMap {
 }
 
 export interface ExtendedHTMLElementEventMap extends HTMLElementEventMap, ExtendedEventMap {
@@ -49,10 +55,14 @@ export type ExtendedEventType =
     | 'touchpan'
     | 'touchpinch'
     | 'touchrotate'
-    | 'multitouch';
+    | 'multitouch'
+    | 'appearancechange'
+    | 'orientationchange'
+    | 'resize';
 type HTMLElementEventKey = keyof HTMLElementEventMap;
 type ExtendedMouseEventKey = keyof ExtendedMouseEventMap;
 type ExtendedTouchEventKey = keyof ExtendedTouchEventMap;
+type ExtendedUIEventMapKey = keyof ExtendedUIEventMap;
 type ExtendedEventKey = keyof ExtendedEventMap;
 type ExtendedHTMLElementEventKey = keyof Partial<ExtendedHTMLElementEventMap>;
 
@@ -60,7 +70,7 @@ export type AddEventListenerOptionsOrBoolean = AddEventListenerOptions | boolean
 export type EventHandlersEventMaps = ExtendedHTMLElementEventKey | ExtendedHTMLElementEventKey[];
 export type EventListenerEventMap = Map<EventHandlersEventMaps, EventListenerOrEventListenerObject[]>;
 
-export type ExtendedEventImplementation = Partial<{ [K in HTMLElementEventKey]: EventListenerOrEventListenerObject[] }>;
+export type ExtendedEventImplementation = Partial<{ [K in HTMLElementEventKey]: EventListenerOrEventListenerObject[] | { 'removeEventListenerCallback': () => void } }>;
 export type ExtendedEventInstance = { [K in ExtendedEventType]: ExtendedEventImplementation };
 
 export interface EventManagerInstance {
@@ -105,7 +115,17 @@ const extendedTouchEventMap: Record<ExtendedTouchEventKey, ExtendedEventType> = 
     'touchpinchcancel': 'touchpinch',
 };
 
+const extendedUIEventMap: Record<ExtendedUIEventMapKey, ExtendedEventType> = {
+    'appearancechange': 'appearancechange',
+    'orientationchange': 'orientationchange',
+    'resize': 'resize'
+};
+
 export const extendedEventMap: Record<ExtendedEventKey, ExtendedEventType> = {
     ...extendedMouseEventMap,
-    ...extendedTouchEventMap
+    ...extendedTouchEventMap,
+    ...extendedUIEventMap,
 };
+
+export interface ExtendedUIEventProperty {
+}

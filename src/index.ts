@@ -1,9 +1,25 @@
 import {DefaultGesturePreventer, EventType, TaskScheduler} from "./utils";
-import {AddEventListenerOptionsOrBoolean, EventHandlersEventMaps, EventListenerEventMap, EventManagerInstance, ExtendedEventImplementation, ExtendedEventInstance, ExtendedEventMap, extendedEventMap, ExtendedEventType, ExtendedHTMLElementEventMap} from "./interfacecs";
-import {ExtendedMouseEvent, ExtendedTouchEvent} from "./event";
-import {EventPath, EventPathList, EventPosition, PathDirection} from "./geometry";
+import {
+    AddEventListenerOptionsOrBoolean,
+    EventHandlersEventMaps,
+    EventListenerEventMap,
+    EventManagerInstance,
+    ExtendedEventImplementation,
+    ExtendedEventInstance,
+    ExtendedEventMap,
+    extendedEventMap,
+    ExtendedEventType,
+    ExtendedHTMLElementEventMap,
+    ExtendedUIEventProperty
+} from "./interfacecs";
+import {ExtendedUIEvent, ExtendedMouseEvent, ExtendedTouchEvent} from "./event";
+import {EventPath, EventPathList, EventPosition, Direction, Appearance, Orientation, Size} from "./geometry";
 
-export { EventPath, EventPathList, EventPosition, PathDirection, ExtendedMouseEvent, ExtendedTouchEvent };
+export {
+    EventPath, EventPathList, EventPosition,
+    Direction, Appearance, Orientation, Size,
+    ExtendedMouseEvent, ExtendedTouchEvent, ExtendedUIEvent
+};
 
 (() => {
     if (typeof window !== 'undefined' && typeof window.TouchEvent === 'undefined') {
@@ -75,7 +91,16 @@ export class EventManager {
                     EventManager.addTouchPanEvent(target);
                     break;
                 case 'touchpinch':
-                    EventManager.addTouchpinchEvent(target);
+                    EventManager.addTouchPinchEvent(target);
+                    break;
+                case 'appearancechange':
+                    EventManager.addAppearanceChange(target);
+                    break;
+                case 'orientationchange':
+                    EventManager.addOrientationChange(target);
+                    break;
+                case 'resize':
+                    EventManager.addResize(target);
                     break;
             }
         }
@@ -221,10 +246,12 @@ export class EventManager {
             if (implementation) {
                 for (const type in implementation) {
                     const callbacks = implementation[type as keyof ExtendedEventImplementation];
-                    if (callbacks) {
+                    if (callbacks instanceof Array) {
                         for (const callback of callbacks) {
                             target.removeEventListener(type, callback);
                         }
+                    } else if (typeof callbacks === 'object') {
+                        callbacks.removeEventListenerCallback();
                     }
                 }
             }
@@ -384,7 +411,7 @@ export class EventManager {
                         }
                     }
 
-                    const directions = new Set(newMousepanPath.map(path => PathDirection.get4Direction(path.degree)));
+                    const directions = new Set(newMousepanPath.map(path => Direction.get4Direction(path.degree)));
 
                     if (directions.size === 1) {
                         let type;
@@ -632,7 +659,7 @@ export class EventManager {
                         }
                     }
 
-                    const directions = new Set(newTouchpanPath.map(path => PathDirection.get4Direction(path.degree)));
+                    const directions = new Set(newTouchpanPath.map(path => Direction.get4Direction(path.degree)));
 
                     if (directions.size === 1) {
                         let type;
@@ -702,7 +729,7 @@ export class EventManager {
         }
     }
 
-    private static addTouchpinchEvent(target: EventTarget): void {
+    private static addTouchPinchEvent(target: EventTarget): void {
         if (!EventManager.hasExtendedEventImplementation(target, 'touchpinch')) {
             let touchStartPosition: EventPosition[] = [];
             let touchStartPath: EventPath | undefined;
@@ -816,11 +843,98 @@ export class EventManager {
         }
     }
 
+    private static addAppearanceChange(target: EventTarget): void {
+        const global = window as any;
+        const matchMedia = global.matchMedia || global.msMatchMedia;
+
+        if (!matchMedia) return;
+
+        const matchPrefersColorSchemeDark = matchMedia('(prefers-color-scheme: dark)');
+
+        const onChange = (event: Event) => {
+            let appearance;
+
+            if (event instanceof MediaQueryListEvent && event.matches) {
+                appearance = Appearance.Dark;
+            } else {
+                appearance = Appearance.Light;
+            }
+
+            target.dispatchEvent(new ExtendedUIEvent('appearancechange', event, appearance));
+        }
+
+        matchPrefersColorSchemeDark.addEventListener('change', onChange);
+
+        EventManager.addExtendedEvent(matchPrefersColorSchemeDark, 'appearancechange', {
+            'change': [onChange]
+        });
+    }
+
+    private static addOrientationChange(target: EventTarget): void {
+        const global = window as any;
+        const matchMedia = global.matchMedia || global.msMatchMedia;
+
+        if (!matchMedia) return;
+
+        const matchPrefersColorSchemeDark = matchMedia('(orientation: portrait)');
+
+        const onChange = (event: Event) => {
+            let appearance;
+
+            if (event instanceof MediaQueryListEvent && event.matches) {
+                appearance = Orientation.Portrait;
+            } else {
+                appearance = Orientation.Landscape;
+            }
+
+            target.dispatchEvent(new ExtendedUIEvent('orientationchange', event, appearance));
+        }
+
+        matchPrefersColorSchemeDark.addEventListener('change', onChange);
+
+        EventManager.addExtendedEvent(matchPrefersColorSchemeDark, 'orientationchange', {
+            'change': [onChange]
+        });
+    }
+
+    private static addResize(target: EventTarget): void {
+        const onResize = (event: Event) => {
+            target.dispatchEvent(new ExtendedUIEvent('resize', event, new Size(target)));
+        }
+
+        if (target === window) {
+            target.addEventListener('resize', onResize);
+
+            EventManager.addExtendedEvent(target, 'resize', {
+                'resize': [onResize]
+            });
+
+            return;
+        }
+
+        let connect = false;
+        const observer = new ResizeObserver(entries => {
+            if (connect) {
+                onResize(new Event('resize'));
+            }
+            connect = true;
+        });
+
+        observer.observe(target as Element);
+
+        EventManager.addExtendedEvent(target, 'resize', {
+            'resize': {
+                'removeEventListenerCallback': () => {
+                    observer.disconnect();
+                }
+            }
+        });
+    }
+
     private static toArray<T>(input: T | T[]): T[] {
         return Array.isArray(input) ? input : [input];
     }
 }
-
 
 
 (() => {
@@ -847,19 +961,23 @@ export class EventManager {
     } catch (e) {
     }
 
+    (window as any).ExtendedMouseEvent = ExtendedMouseEvent;
+    (window as any).ExtendedTouchEvent = ExtendedTouchEvent;
+    (window as any).ExtendedUIEvent = ExtendedUIEvent;
     (window as any).EventManager = EventManager;
     (window as any).EventPath = EventPath;
     (window as any).EventPathList = EventPathList;
     (window as any).EventPosition = EventPosition;
-    (window as any).PathDirection = PathDirection;
-    (window as any).ExtendedMouseEvent = ExtendedMouseEvent;
-    (window as any).ExtendedTouchEvent = ExtendedTouchEvent;
+    (window as any).Direction = Direction;
+    (window as any).Appearance = Appearance;
+    (window as any).Orientation = Orientation;
+    (window as any).Size = Size;
 
-    Element.prototype.addManagedEventListener = function (types: EventHandlersEventMaps, callback: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean) {
+    EventTarget.prototype.addManagedEventListener = function (types: EventHandlersEventMaps, callback: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean) {
         EventManager.add(this, types, callback, options);
     };
 
-    Element.prototype.removeManagedEventListener = function (types?: EventHandlersEventMaps, callback?: EventListenerOrEventListenerObject) {
+    EventTarget.prototype.removeManagedEventListener = function (types?: EventHandlersEventMaps, callback?: EventListenerOrEventListenerObject) {
         EventManager.remove(this, types, callback);
     };
 })();
@@ -869,12 +987,16 @@ declare global {
         EventManager: EventManager;
         ExtendedMouseEvent: ExtendedMouseEvent;
         ExtendedTouchEvent: ExtendedTouchEvent;
-        PathDirection: PathDirection;
+        ExtendedUIEvent: ExtendedUIEvent<ExtendedUIEventProperty>;
         EventPosition: EventPosition;
         EventPath: EventPath;
         EventPathList: EventPathList;
+        Direction: Direction;
+        Appearance: Appearance;
+        Orientation: Orientation;
+        Size: Size;
     }
-    
+
     interface EventTarget {
         addManagedEventListener: (types: EventHandlersEventMaps, callback: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean) => void;
         removeManagedEventListener: (types?: EventHandlersEventMaps, callback?: EventListenerOrEventListenerObject) => void;

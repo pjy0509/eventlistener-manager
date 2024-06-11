@@ -1,4 +1,6 @@
-export class PathDirection {
+import {ExtendedUIEventProperty} from "./interfacecs";
+
+export class Direction {
     static 'U' = 0
     static 'UR' = 1
     static 'R' = 2
@@ -10,29 +12,29 @@ export class PathDirection {
     static 'Unknown' = -1
 
     static get4Direction(degree: number) {
-        if (degree >= 0 && degree <= 45) return PathDirection.R;
-        if (degree > 45 && degree <= 135) return PathDirection.D;
-        if (degree > 135 && degree <= 180) return PathDirection.L;
-        if (degree >= -180 && degree <= -135) return PathDirection.L;
-        if (degree > -135 && degree <= -45) return PathDirection.U;
-        if (degree > -45 && degree <= -0) return PathDirection.R;
+        if (degree >= 0 && degree <= 45) return Direction.R;
+        if (degree > 45 && degree <= 135) return Direction.D;
+        if (degree > 135 && degree <= 180) return Direction.L;
+        if (degree >= -180 && degree <= -135) return Direction.L;
+        if (degree > -135 && degree <= -45) return Direction.U;
+        if (degree > -45 && degree <= -0) return Direction.R;
 
-        return PathDirection.Unknown;
+        return Direction.Unknown;
     }
 
     static get8Direction(degree: number) {
-        if (degree >= 0 && degree <= 22.5) return PathDirection.R;
-        if (degree > 22.5 && degree <= 67.5) return PathDirection.DR;
-        if (degree > 67.5 && degree <= 112.5) return PathDirection.D;
-        if (degree > 112.5 && degree <= 157.5) return PathDirection.DL;
-        if (degree > 157.5 && degree <= 180) return PathDirection.L;
-        if (degree >= -180 && degree <= -157.5) return PathDirection.L;
-        if (degree > -157.5 && degree <= -112.5) return PathDirection.UL;
-        if (degree > -112.5 && degree <= -67.5) return PathDirection.U;
-        if (degree > -67.5 && degree <= -22.5) return PathDirection.UR;
-        if (degree > -22.5 && degree <= -0) return PathDirection.R;
+        if (degree >= 0 && degree <= 22.5) return Direction.R;
+        if (degree > 22.5 && degree <= 67.5) return Direction.DR;
+        if (degree > 67.5 && degree <= 112.5) return Direction.D;
+        if (degree > 112.5 && degree <= 157.5) return Direction.DL;
+        if (degree > 157.5 && degree <= 180) return Direction.L;
+        if (degree >= -180 && degree <= -157.5) return Direction.L;
+        if (degree > -157.5 && degree <= -112.5) return Direction.UL;
+        if (degree > -112.5 && degree <= -67.5) return Direction.U;
+        if (degree > -67.5 && degree <= -22.5) return Direction.UR;
+        if (degree > -22.5 && degree <= -0) return Direction.R;
 
-        return PathDirection.Unknown;
+        return Direction.Unknown;
     }
 }
 
@@ -100,7 +102,7 @@ export class EventPath {
     readonly time: number;
     readonly radian: number;
     readonly degree: number;
-    readonly direction: PathDirection;
+    readonly direction: Direction;
 
     constructor(p1: EventPosition, p2: EventPosition) {
         this.start = p1;
@@ -113,7 +115,7 @@ export class EventPath {
         this.speed = this.distance / this.time;
         this.radian = Math.atan2(this.dy, this.dx);
         this.degree = this.radian * (180 / Math.PI);
-        this.direction = PathDirection.get8Direction(this.degree);
+        this.direction = Direction.get8Direction(this.degree);
     }
 
     equals(other: EventPath) {
@@ -201,5 +203,27 @@ export class EventPathList extends Array<EventPath> {
 
     dDegree(index: number) {
         return this.dNumber(index, 'degree');
+    }
+}
+
+export class Appearance implements ExtendedUIEventProperty {
+    static Dark = 0;
+    static Light = 1;
+}
+
+export class Orientation implements ExtendedUIEventProperty {
+    static Portrait = 0;
+    static Landscape = 1;
+}
+
+export class Size implements ExtendedUIEventProperty {
+    width: number;
+    height: number;
+
+    constructor(target: EventTarget) {
+        const element = target as any;
+
+        this.width = element.outerWidth || element.offsetWidth || NaN;
+        this.height = element.outerHeight || element.offsetHeight || NaN;
     }
 }
