@@ -220,10 +220,8 @@ export class Size implements ExtendedUIEventProperty {
     width: number;
     height: number;
 
-    constructor(target: EventTarget) {
-        const element = target as any;
-
-        this.width = element.outerWidth || element.offsetWidth || NaN;
-        this.height = element.outerHeight || element.offsetHeight || NaN;
+    constructor(target: any) {
+        this.width = target.outerWidth || target.offsetWidth || target.width || NaN;
+        this.height = target.outerHeight || target.offsetHeight || target.height || NaN;
     }
 }

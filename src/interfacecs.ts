@@ -39,6 +39,7 @@ interface ExtendedUIEventMap {
     'appearancechange': MediaQueryListEvent;
     'orientationchange': MediaQueryListEvent;
     'resize': UIEvent;
+    'intersectionchange': UIEvent;
 }
 
 export interface ExtendedEventMap extends ExtendedMouseEventMap, ExtendedTouchEventMap, ExtendedUIEventMap {
@@ -58,7 +59,8 @@ export type ExtendedEventType =
     | 'multitouch'
     | 'appearancechange'
     | 'orientationchange'
-    | 'resize';
+    | 'resize'
+    | 'intersection';
 type HTMLElementEventKey = keyof HTMLElementEventMap;
 type ExtendedMouseEventKey = keyof ExtendedMouseEventMap;
 type ExtendedTouchEventKey = keyof ExtendedTouchEventMap;
@@ -70,7 +72,7 @@ export type AddEventListenerOptionsOrBoolean = AddEventListenerOptions | boolean
 export type EventHandlersEventMaps = ExtendedHTMLElementEventKey | ExtendedHTMLElementEventKey[];
 export type EventListenerEventMap = Map<EventHandlersEventMaps, EventListenerOrEventListenerObject[]>;
 
-export type ExtendedEventImplementation = Partial<{ [K in HTMLElementEventKey]: EventListenerOrEventListenerObject[] | { 'removeEventListenerCallback': () => void } }>;
+export type ExtendedEventImplementation = Partial<{ [K in HTMLElementEventKey]: EventListenerOrEventListenerObject[] }> & { 'callback'?: () => void };
 export type ExtendedEventInstance = { [K in ExtendedEventType]: ExtendedEventImplementation };
 
 export interface EventManagerInstance {
@@ -118,7 +120,8 @@ const extendedTouchEventMap: Record<ExtendedTouchEventKey, ExtendedEventType> = 
 const extendedUIEventMap: Record<ExtendedUIEventMapKey, ExtendedEventType> = {
     'appearancechange': 'appearancechange',
     'orientationchange': 'orientationchange',
-    'resize': 'resize'
+    'resize': 'resize',
+    'intersectionchange': 'intersection'
 };
 
 export const extendedEventMap: Record<ExtendedEventKey, ExtendedEventType> = {

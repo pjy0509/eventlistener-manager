@@ -1,3 +1,15 @@
+(() => {
+    if (typeof window !== 'undefined' && typeof window.TouchEvent === 'undefined') {
+        class TouchEvent extends UIEvent {
+            constructor(type: string, init?: TouchEventInit) {
+                super(type, init);
+            }
+        }
+
+        (window as any).TouchEvent = TouchEvent;
+    }
+})();
+
 import {DefaultGesturePreventer, EventType, TaskScheduler} from "./utils";
 import {
     AddEventListenerOptionsOrBoolean,
@@ -21,21 +33,9 @@ export {
     ExtendedMouseEvent, ExtendedTouchEvent, ExtendedUIEvent
 };
 
-(() => {
-    if (typeof window !== 'undefined' && typeof window.TouchEvent === 'undefined') {
-        class TouchEvent extends UIEvent {
-            constructor(type: string, init?: TouchEventInit) {
-                super(type, init);
-            }
-        }
-
-        (window as any).TouchEvent = TouchEvent;
-    }
-})();
-
-// class
 const scheduler = new TaskScheduler(5);
 
+// class
 export class EventManager {
     static instance: EventManagerInstance = {
         generalEventInstance: new WeakMap(),
@@ -53,6 +53,8 @@ export class EventManager {
 
     static passiveSupported = false;
     static onceSupported = false;
+    static resizeObserver: ResizeObserver | undefined = undefined;
+    static intersectionObserver: IntersectionObserver | undefined = undefined;
 
     static add(target: EventTarget, types: EventHandlersEventMaps, callback: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean): void {
         for (const type of EventManager.toArray(types)) {
@@ -102,6 +104,9 @@ export class EventManager {
                     break;
                 case 'resize':
                     EventManager.addResize(target);
+                    break;
+                case 'intersection':
+                    EventManager.addIntersection(target);
                     break;
             }
         }
@@ -246,13 +251,13 @@ export class EventManager {
             const implementation = extendedInstance[extendedEvent];
             if (implementation) {
                 for (const type in implementation) {
-                    const callbacks = implementation[type as keyof ExtendedEventImplementation];
+                    const callbacks = implementation[type as keyof ExtendedEventImplementation | 'callback'];
                     if (callbacks instanceof Array) {
                         for (const callback of callbacks) {
                             target.removeEventListener(type, callback);
                         }
-                    } else if (typeof callbacks === 'object') {
-                        callbacks.removeEventListenerCallback();
+                    } else if (typeof callbacks === 'function') {
+                        callbacks();
                     }
                 }
             }
@@ -864,7 +869,7 @@ export class EventManager {
             target.dispatchEvent(new ExtendedUIEvent('appearancechange', event, {appearance: getAppearance(event)}));
         }
 
-        matchPrefersColorSchemeDark.addEventListener('change', onChange);
+        matchPrefersColorSchemeDark.addEventListener('change', onChange, {passive: false});
 
         if (EventManager.options.callWhenAddedUIEvent) {
             target.dispatchEvent(new ExtendedUIEvent('appearancechange', new MediaQueryListEvent('change'), {appearance: getAppearance(matchPrefersColorSchemeDark)}));
@@ -895,7 +900,7 @@ export class EventManager {
             target.dispatchEvent(new ExtendedUIEvent('orientationchange', event, {orientation: getOrientation(event)}));
         }
 
-        matchOrientationPortrait.addEventListener('change', onChange);
+        matchOrientationPortrait.addEventListener('change', onChange, {passive: false});
 
         if (EventManager.options.callWhenAddedUIEvent) {
             target.dispatchEvent(new ExtendedUIEvent('appearancechange', new MediaQueryListEvent('change'), {appearance: getOrientation(matchOrientationPortrait)}));
@@ -909,25 +914,80 @@ export class EventManager {
     private static addResize(target: EventTarget): void {
         if (target === window || !('ResizeObserver' in window)) return;
 
-        const onResize = (event: Event) => {
-            target.dispatchEvent(new ExtendedUIEvent('resize', event, {size: new Size(target)}));
+        const element = target as Element;
+        const onResize = (element: Element) => {
+            const dispatchEvent = () => target.dispatchEvent(new ExtendedUIEvent('resize', new Event('resize'), {size: new Size(element)}));
+
+            if (EventManager.options.strict) {
+                dispatchEvent();
+            } else {
+                scheduler.scheduleTask(dispatchEvent);
+            }
         }
 
         let connect = false;
-        const observer = new ResizeObserver(entries => {
-            if (connect || EventManager.options.callWhenAddedUIEvent) {
-                onResize(new Event('resize'));
-            }
-            connect = true;
-        });
+        let observer;
 
-        observer.observe(target as Element);
+        if (EventManager.resizeObserver) {
+            observer = EventManager.resizeObserver;
+        } else {
+            observer = new ResizeObserver(() => {
+                if (connect || EventManager.options.callWhenAddedUIEvent) {
+                    onResize(element);
+                }
+                connect = true;
+            });
+
+            EventManager.resizeObserver = observer;
+        }
+
+        observer.observe(element);
 
         EventManager.addExtendedEvent(target, 'resize', {
-            'resize': {
-                'removeEventListenerCallback': () => {
-                    observer.disconnect();
+            'callback': () => observer.unobserve(element)
+        });
+    }
+
+    private static addIntersection(target: EventTarget): void {
+        if (target === window || !('IntersectionObserver' in window)) return;
+
+        const element = target as Element;
+        const onIntersection = (entry: IntersectionObserverEntry) => {
+            const dispatchEvent = () => target.dispatchEvent(new ExtendedUIEvent('intersectionchange', new Event('intersectionchange'), {size: new Size(entry.intersectionRect), ration: entry.intersectionRatio}));
+
+            if (EventManager.options.strict) {
+                dispatchEvent();
+            } else {
+                scheduler.scheduleTask(dispatchEvent);
+            }
+        }
+
+        let connect = false;
+        let observer;
+
+        if (EventManager.intersectionObserver) {
+            observer = EventManager.intersectionObserver;
+        } else {
+            observer = new IntersectionObserver(entries => {
+                if (connect || EventManager.options.callWhenAddedUIEvent) {
+                    if (entries.length > 0) {
+                        const entry = entries[0];
+                        onIntersection(entry);
+                    }
                 }
+                connect = true;
+            }, {
+                threshold: Array.from({length: 1001}, (_, i) => i / 1000)
+            });
+
+            EventManager.intersectionObserver = observer;
+        }
+
+        observer.observe(element);
+
+        EventManager.addExtendedEvent(target, 'intersection', {
+            'callback': () => {
+                observer.unobserve(element);
             }
         });
     }
