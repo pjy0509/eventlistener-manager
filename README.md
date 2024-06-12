@@ -12,7 +12,7 @@ npm i eventlistener-manager
 ```
 cdn
 ```html
-<script src="https://unpkg.com/eventlistener-manager/dist/index.umd.js"></script>
+<script src="https://unpkg.com/eventlistener-manager@latest/dist/index.umd.js"></script>
 ```
 ## Report errors and suggestions
 ### [Gmail](mailto:qkrwnss0509@gmail.com?subject=Report_errors_and_suggestions)

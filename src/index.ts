@@ -1,15 +1,5 @@
-(() => {
-    if (typeof window !== 'undefined' && typeof window.TouchEvent === 'undefined') {
-        class TouchEvent extends UIEvent {
-            constructor(type: string, init?: TouchEventInit) {
-                super(type, init);
-            }
-        }
-
-        (window as any).TouchEvent = TouchEvent;
-    }
-})();
-
+import './polyfill';
+import packageJSON from '../package.json';
 import {DefaultGesturePreventer, EventType, TaskScheduler} from "./utils";
 import {
     AddEventListenerOptionsOrBoolean,
@@ -55,6 +45,7 @@ export class EventManager {
     static onceSupported = false;
     static resizeObserver: ResizeObserver | undefined = undefined;
     static intersectionObserver: IntersectionObserver | undefined = undefined;
+    static version = packageJSON.version;
 
     static add(target: EventTarget, types: EventHandlersEventMaps, callback: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean): void {
         for (const type of EventManager.toArray(types)) {
