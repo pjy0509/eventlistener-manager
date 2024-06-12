@@ -48,6 +48,7 @@ export class EventManager {
         mouseLongpressBelowDistance: 15,
         touchLongpressTimeRequired: 750,
         touchLongpressBelowDistance: 30,
+        callWhenAddedUIEvent: true,
     };
 
     static passiveSupported = false;
@@ -851,19 +852,23 @@ export class EventManager {
 
         const matchPrefersColorSchemeDark = matchMedia('(prefers-color-scheme: dark)');
 
-        const onChange = (event: Event) => {
-            let appearance;
-
-            if (event instanceof MediaQueryListEvent && event.matches) {
-                appearance = Appearance.Dark;
-            } else {
-                appearance = Appearance.Light;
+        const getAppearance = (event: any) => {
+            if (event.matches) {
+                return Appearance.Dark;
             }
 
-            target.dispatchEvent(new ExtendedUIEvent('appearancechange', event, appearance));
+            return Appearance.Light;
+        }
+
+        const onChange = (event: Event) => {
+            target.dispatchEvent(new ExtendedUIEvent('appearancechange', event, {appearance: getAppearance(event)}));
         }
 
         matchPrefersColorSchemeDark.addEventListener('change', onChange);
+
+        if (EventManager.options.callWhenAddedUIEvent) {
+            target.dispatchEvent(new ExtendedUIEvent('appearancechange', new MediaQueryListEvent('change'), {appearance: getAppearance(matchPrefersColorSchemeDark)}));
+        }
 
         EventManager.addExtendedEvent(matchPrefersColorSchemeDark, 'appearancechange', {
             'change': [onChange]
@@ -876,45 +881,41 @@ export class EventManager {
 
         if (!matchMedia) return;
 
-        const matchPrefersColorSchemeDark = matchMedia('(orientation: portrait)');
+        const matchOrientationPortrait = matchMedia('(orientation: portrait)');
 
-        const onChange = (event: Event) => {
-            let appearance;
-
-            if (event instanceof MediaQueryListEvent && event.matches) {
-                appearance = Orientation.Portrait;
-            } else {
-                appearance = Orientation.Landscape;
+        const getOrientation = (event: any) => {
+            if (event.matches) {
+                return Orientation.Portrait;
             }
 
-            target.dispatchEvent(new ExtendedUIEvent('orientationchange', event, appearance));
+            return Orientation.Landscape;
         }
 
-        matchPrefersColorSchemeDark.addEventListener('change', onChange);
+        const onChange = (event: any) => {
+            target.dispatchEvent(new ExtendedUIEvent('orientationchange', event, {orientation: getOrientation(event)}));
+        }
 
-        EventManager.addExtendedEvent(matchPrefersColorSchemeDark, 'orientationchange', {
+        matchOrientationPortrait.addEventListener('change', onChange);
+
+        if (EventManager.options.callWhenAddedUIEvent) {
+            target.dispatchEvent(new ExtendedUIEvent('appearancechange', new MediaQueryListEvent('change'), {appearance: getOrientation(matchOrientationPortrait)}));
+        }
+
+        EventManager.addExtendedEvent(matchOrientationPortrait, 'orientationchange', {
             'change': [onChange]
         });
     }
 
     private static addResize(target: EventTarget): void {
+        if (target === window || !('ResizeObserver' in window)) return;
+
         const onResize = (event: Event) => {
-            target.dispatchEvent(new ExtendedUIEvent('resize', event, new Size(target)));
-        }
-
-        if (target === window) {
-            target.addEventListener('resize', onResize);
-
-            EventManager.addExtendedEvent(target, 'resize', {
-                'resize': [onResize]
-            });
-
-            return;
+            target.dispatchEvent(new ExtendedUIEvent('resize', event, {size: new Size(target)}));
         }
 
         let connect = false;
         const observer = new ResizeObserver(entries => {
-            if (connect) {
+            if (connect || EventManager.options.callWhenAddedUIEvent) {
                 onResize(new Event('resize'));
             }
             connect = true;
@@ -935,7 +936,6 @@ export class EventManager {
         return Array.isArray(input) ? input : [input];
     }
 }
-
 
 (() => {
     try {
@@ -987,7 +987,7 @@ declare global {
         EventManager: EventManager;
         ExtendedMouseEvent: ExtendedMouseEvent;
         ExtendedTouchEvent: ExtendedTouchEvent;
-        ExtendedUIEvent: ExtendedUIEvent<ExtendedUIEventProperty>;
+        ExtendedUIEvent: ExtendedUIEvent<Extract<string, keyof UIEvent>, ExtendedUIEventProperty>;
         EventPosition: EventPosition;
         EventPath: EventPath;
         EventPathList: EventPathList;

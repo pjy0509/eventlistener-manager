@@ -25,11 +25,11 @@ export class ExtendedTouchEvent extends TouchEvent {
     }
 }
 
-export class ExtendedUIEvent<T extends ExtendedUIEventProperty> extends UIEvent {
-    appearance: T;
+export class ExtendedUIEvent<T extends Extract<string, keyof UIEvent>, U extends ExtendedUIEventProperty> extends UIEvent {
+    property: { [K in T]: U };
 
-    constructor(type: string, event: Event, appearance: T) {
+    constructor(type: string, event: Event, property: { [K in T]: U }) {
         super(type, CloneEventInit.clone(event));
-        this.appearance = appearance;
+        this.property = property;
     }
 }

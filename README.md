@@ -1,4 +1,8 @@
 # Eventlistener Manager
+![NPM Downloads](https://img.shields.io/npm/d18m/eventlistener-manager?style=flat&logo=npm&logoColor=%23CB3837&label=Download&color=%23CB3837&link=https%3A%2F%2Fwww.npmjs.com%2Fpackage%2Feventlistener-manager) 
+![GitHub Repo stars](https://img.shields.io/github/stars/pjy0509/eventlistener-manager?style=flat&logo=github&logoColor=181717&label=Stars&color=181717&link=https%3A%2F%2Fgithub.com%2Fpjy0509%2Feventlistener-manager)
+
+![Static Badge](https://img.shields.io/badge/Typescript-8A2BE2?logo=typescript&color=000000)
 ## Sample page
 ### [Link](https://pjy0509.github.io/example/eventlistener-manager/)
 ## Install
@@ -60,7 +64,7 @@ EventManager.add(eventTarget, ['mouselongpressstart'], callback);
 eventTarget.addManagedEventListener(['mouselongpressstart']);
 ``` 
 ### Supported custom events
-Supported custom events include mouse long press, mouse pan, touch long press, touch pan, and touch pinch.
+Supported custom events include mouse long press, mouse pan, touch long press, touch pan, touch pinch, screen mode change, orientation change, and any event target resize.
 ```typescript
 interface ExtendedMouseEventMap {  
   'mouselongpressstart': MouseEvent;  
@@ -98,15 +102,25 @@ interface ExtendedTouchEventMap {
   'touchpinchend': TouchEvent;  
   'touchpinchcancel': TouchEvent;  
 }
+
+interface ExtendedUIEventMap {
+    'appearancechange': MediaQueryListEvent;
+    'orientationchange': MediaQueryListEvent;
+    'resize': UIEvent;
+}
 ```
 ### Options
 Custom event options can be modified.
+
 ```typescript
+import {EventManager} from "./index";
+
 EventManager.options.strict = true; // Use strict callback mode
 EventManager.options.mouseLongpressTimeRequired = 750; // Mouse long press time required
 EventManager.options.mouseLongpressBelowDistance = 15; // Mouse long press below distance
 EventManager.options.touchLongpressTimeRequired = 750; // Touch long press time required
 EventManager.options.touchLongpressBelowDistance = 30; // Touch long press below distance
+EventManager.options.callWhenAddedUIEvent = true; // Call callback when extended ui event added
 ```
 ## 4. Support event type polyfill
 ```typescript
