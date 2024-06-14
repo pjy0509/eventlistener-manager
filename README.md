@@ -20,8 +20,9 @@ cdn
 | Version | Log                                                                                                                 |
 |---------|---------------------------------------------------------------------------------------------------------------------|
 | 1.0.25  | Support CDN                                                                                                         |
-| 1.0.27  | Add 'appearancechange', 'orientationchange', 'resize' eventlistener                                                 |
+| 1.0.27  | Add 'appearancechange', 'orientationchange', 'resize', 'intersectionchange' eventlistener                           |
 | 1.0.32  | Polyfill 'addEventlistener', 'removeEventlistener', 'dispatchEvent', requestAnimationFrame', 'cancelAnimationFrame' |
+| 1.0.33  | Polyfill 'WeakMap'                                                                                                  |
 ## 1. Add events
 #### Add single type event
 ```typescript
