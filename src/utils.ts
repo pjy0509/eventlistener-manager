@@ -1,4 +1,29 @@
+import {AddEventListenerOptionsOrBoolean, EventHandlersEventMaps} from "./interfacecs";
+import {EventManager} from "./index";
+
 type ViewportContentMap = { [K: string]: string };
+
+export const GlobalThis = (() => {
+    if (typeof window !== 'undefined') {
+        return window;
+    }
+
+    if (typeof global !== 'undefined') {
+        return global;
+    }
+
+    if (typeof globalThis !== 'undefined') {
+        return globalThis;
+    }
+
+    // eslint-disable-next-line no-restricted-globals
+    if (typeof self !== 'undefined') {
+        // eslint-disable-next-line no-restricted-globals
+        return self;
+    }
+
+    return this;
+})() as any;
 
 export class EventType {
     private static vendors = ['', 'webkit', 'moz', 'ms', 'MS', 'o', 'O'];
@@ -61,30 +86,87 @@ export class TaskScheduler {
     private readonly delayThreshold: number;
     private scheduledTask: (() => void) | null = null;
     private rafId: number | null = null;
+    private readonly requestAnimationFrame;
+    private readonly cancelAnimationFrame;
+    private readonly now;
 
     constructor(delayThreshold: number) {
         this.delayThreshold = delayThreshold;
+
+        const now = (
+            Date.now
+            || function () {
+                return new Date().getTime();
+            }
+        );
+
+        const start = now();
+
+        this.now = (
+            GlobalThis.performance?.now
+            || function () {
+                return now() - start;
+            }
+        )
+
+        let lastTime = 0;
+
+        this.requestAnimationFrame = (
+            GlobalThis.requestAnimationFrame
+            || GlobalThis.webkitRequestAnimationFrame
+            || GlobalThis.mozRequestAnimationFrame
+            || GlobalThis.oRequestAnimationFrame
+            || GlobalThis.msRequestAnimationFrame
+            || ((callback: FrameRequestCallback) => {
+                const currentTime = this.now();
+                const timeToCall = Math.max(0, 16 - (currentTime - lastTime));
+
+                const id = window.setTimeout(function () {
+                    callback(currentTime + timeToCall);
+                }, timeToCall);
+
+                lastTime = currentTime + timeToCall;
+
+                return id;
+            })
+        );
+
+        this.cancelAnimationFrame = (
+            GlobalThis.cancelAnimationFrame
+            || GlobalThis.webkitCancelAnimationFrame
+            || GlobalThis.webkitCancelRequestAnimationFrame
+            || GlobalThis.mozCancelAnimationFrame
+            || GlobalThis.mozCancelRequestAnimationFrame
+            || GlobalThis.oCancelAnimationFrame
+            || GlobalThis.oCancelRequestAnimationFrame
+            || GlobalThis.msCancelAnimationFrame
+            || GlobalThis.msCancelRequestAnimationFrame
+            || ((id: number) => {
+                clearTimeout(id);
+            })
+        );
+
     }
 
     scheduleTask(task: () => void): void {
-        const currentTime = window.performance.now();
+        const currentTime = this.now();
 
         if (currentTime - this.lastExecutionTime >= this.delayThreshold) {
             if (this.rafId !== null) {
-                window.cancelAnimationFrame(this.rafId);
+                this.cancelAnimationFrame(this.rafId);
                 this.rafId = null;
             }
             this.executeTask(task);
         } else {
             this.scheduledTask = task;
             if (this.rafId === null) {
-                this.rafId = window.requestAnimationFrame(() => this.runScheduledTask());
+                this.rafId = this.requestAnimationFrame(() => this.runScheduledTask());
             }
         }
     }
 
     private executeTask(task: () => void): void {
-        this.lastExecutionTime = window.performance.now();
+        this.lastExecutionTime = this.now();
         task();
     }
 
@@ -232,3 +314,185 @@ export class DefaultGesturePreventer {
             .join(', ');
     }
 }
+
+export class EventListenerMap {
+    private map: Map<EventListenerOrEventListenerObject, { [K in 'capture' | 'release']: EventListener | undefined }> = new Map();
+
+    get(callback: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean) {
+        const optionsObject = this.parseOptions(options);
+        const callbackObject = this.map.get(callback);
+
+        if (optionsObject.capture) {
+            return callbackObject?.capture;
+        }
+
+        return callbackObject?.release;
+    }
+
+    set(target: EventTarget, type: EventHandlersEventMaps, callback: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean) {
+        let callbackFunction = this.parseCallback(callback);
+        const optionsObject = this.parseOptions(options);
+
+        const isPassiveSupported = EventListenerRegister.passiveSupported.get(target.constructor);
+        const isOnceSupported = EventListenerRegister.onceSupported.get(target.constructor);
+
+        let newCallbackFunction: EventListener = function (event: Event) {
+            if (!isPassiveSupported && optionsObject.passive) {
+                event.preventDefault = function () {
+                };
+            }
+            callbackFunction(event);
+            if (!isOnceSupported && optionsObject.once) {
+                target.removeEventListener(event.type, newCallbackFunction as EventListenerOrEventListenerObject);
+            }
+        };
+
+        if (isPassiveSupported && isOnceSupported) {
+            newCallbackFunction = callbackFunction;
+        }
+
+        if (optionsObject.capture) {
+            this.map.set(callback, {'capture': newCallbackFunction, release: this.map.get(callback)?.release});
+        } else {
+            this.map.set(callback, {capture: this.map.get(callback)?.capture, 'release': newCallbackFunction});
+        }
+
+        return callbackFunction;
+    }
+
+    delete(callback: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean) {
+        const optionsObject = this.parseOptions(options);
+        const callbackObject = this.map.get(callback);
+
+        if (optionsObject.capture) {
+            delete callbackObject?.capture;
+        } else {
+            delete callbackObject?.release;
+        }
+
+        if (callbackObject) {
+            if (Object.keys(callbackObject).length === 0) {
+                this.map.delete(callback);
+            } else {
+                this.map.set(callback, callbackObject);
+            }
+        }
+    }
+
+    keys() {
+        return this.map.keys();
+    }
+
+    size() {
+        return this.map.size;
+    }
+
+    private parseCallback(callback: EventListenerOrEventListenerObject) {
+        if (typeof callback === 'function') {
+            return callback;
+        }
+
+        return callback.handleEvent;
+    }
+
+    private parseOptions(options?: AddEventListenerOptionsOrBoolean) {
+        if (options === undefined) {
+            return {};
+        }
+
+        if (typeof options === 'boolean') {
+            return {capture: options};
+        }
+
+        return options;
+    }
+}
+
+export class EventListenerRegister {
+    static passiveSupported: Map<Function, boolean> = new Map();
+    static onceSupported: Map<Function, boolean> = new Map();
+
+    private readonly target: any
+
+    addEventListener = (type: string, callback: any, options?: any) => {
+        if ('addEventListener' in this.target) {
+            this.target.addEventListener(type, callback, options);
+            return;
+        }
+        if ('attachEvent' in this.target) {
+            this.target.attachEvent('on' + type, callback);
+            return;
+        }
+        if ('addListener' in this.target) {
+            this.target.addListener(callback);
+            return;
+        }
+        return;
+    }
+
+    removeEventListener = (type: string, callback: any, options?: any) => {
+        if ('removeEventListener' in this.target) {
+            this.target.removeEventListener(type, callback, options);
+            return;
+        }
+        if ('detachEvent' in this.target) {
+            this.target.detachEvent('on' + type, callback);
+            return;
+        }
+        if ('removeListener' in this.target) {
+            this.target.removeListener(callback);
+            return;
+        }
+        return () => {
+        };
+    }
+
+    dispatchEvent = (event: Event) => {
+        if ('dispatchEvent' in this.target) {
+            this.target.dispatchEvent(event);
+            return;
+        }
+        if ('fireEvent' in this.target) {
+            this.target.fireEvent('on' + event.type);
+            return;
+        }
+        return;
+    }
+
+    constructor(target: EventTarget) {
+        this.target = target;
+        this.checkSupportedOptions(target);
+    }
+
+    private checkSupportedOptions(target: EventTarget) {
+        if (EventListenerRegister.onceSupported.get(target.constructor) === undefined || EventListenerRegister.passiveSupported.get(target.constructor) === undefined) {
+            EventListenerRegister.passiveSupported.set(target.constructor, false);
+            EventListenerRegister.onceSupported.set(target.constructor, false);
+
+            try {
+                const empty = () => {
+                };
+
+                const options = Object.create({}, {
+                    passive: {
+                        get() {
+                            EventListenerRegister.passiveSupported.set(target.constructor, true);
+                            return undefined;
+                        }
+                    },
+                    once: {
+                        get() {
+                            EventListenerRegister.onceSupported.set(target.constructor, true);
+                            return undefined;
+                        }
+                    },
+                });
+
+                this.addEventListener('test', empty, options);
+                this.removeEventListener('test', empty, options);
+            } catch (e) {
+            }
+        }
+    }
+}
+

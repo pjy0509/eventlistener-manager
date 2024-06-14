@@ -1,3 +1,5 @@
+import {EventListenerMap} from "./utils";
+
 interface ExtendedMouseEventMap {
     'mouselongpressstart': MouseEvent;
     'mouselongpressmove': MouseEvent;
@@ -70,7 +72,7 @@ type ExtendedHTMLElementEventKey = keyof Partial<ExtendedHTMLElementEventMap>;
 
 export type AddEventListenerOptionsOrBoolean = AddEventListenerOptions | boolean;
 export type EventHandlersEventMaps = ExtendedHTMLElementEventKey | ExtendedHTMLElementEventKey[];
-export type EventListenerEventMap = Map<EventHandlersEventMaps, EventListenerOrEventListenerObject[]>;
+export type EventListenerEventMap = Map<EventHandlersEventMaps, EventListenerMap>;
 
 export type ExtendedEventImplementation = Partial<{ [K in HTMLElementEventKey]: EventListenerOrEventListenerObject[] }> & { 'callback'?: () => void };
 export type ExtendedEventInstance = { [K in ExtendedEventType]: ExtendedEventImplementation };

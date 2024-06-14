@@ -44,7 +44,7 @@ export class EventPosition {
     readonly t: number;
 
     constructor(...args: any) {
-        this.t = window.performance.now();
+        this.t = new Date().getTime();
 
         const arg0 = args[0];
         const arg1 = args[1];

@@ -17,10 +17,11 @@ cdn
 ## Report errors and suggestions
 ### [Gmail](mailto:qkrwnss0509@gmail.com?subject=Report_errors_and_suggestions)
 ## Change log
-| Version | Log                                                                                        |
-|---------|--------------------------------------------------------------------------------------------|
-| 1.0.25  | Support CDN                                                                                |
-| 1.0.27  | Add 'appearancechange', 'orientationchange', 'resize' eventlistener                        |
+| Version | Log                                                                                                                 |
+|---------|---------------------------------------------------------------------------------------------------------------------|
+| 1.0.25  | Support CDN                                                                                                         |
+| 1.0.27  | Add 'appearancechange', 'orientationchange', 'resize' eventlistener                                                 |
+| 1.0.32  | Polyfill 'addEventlistener', 'removeEventlistener', 'dispatchEvent', requestAnimationFrame', 'cancelAnimationFrame' |
 ## 1. Add events
 #### Add single type event
 ```typescript

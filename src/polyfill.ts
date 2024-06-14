@@ -1,12 +1,14 @@
+import {GlobalThis} from "./utils";
+
 export default (() => {
-    if (typeof window !== 'undefined' && typeof window.TouchEvent === 'undefined') {
+    if (typeof GlobalThis.TouchEvent === 'undefined') {
         class TouchEvent extends UIEvent {
             constructor(type: string, init?: TouchEventInit) {
                 super(type, init);
             }
         }
 
-        (window as any).TouchEvent = TouchEvent;
+        GlobalThis.TouchEvent = TouchEvent;
     }
 
     return undefined;

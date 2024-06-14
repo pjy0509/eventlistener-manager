@@ -1,6 +1,6 @@
 import './polyfill';
 import packageJSON from '../package.json';
-import {DefaultGesturePreventer, EventType, TaskScheduler} from "./utils";
+import {DefaultGesturePreventer, EventListenerMap, EventListenerRegister, EventType, GlobalThis, TaskScheduler} from "./utils";
 import {
     AddEventListenerOptionsOrBoolean,
     EventHandlersEventMaps,
@@ -25,7 +25,6 @@ export {
 
 const scheduler = new TaskScheduler(5);
 
-// class
 export class EventManager {
     static instance: EventManagerInstance = {
         generalEventInstance: new WeakMap(),
@@ -41,8 +40,6 @@ export class EventManager {
         callWhenAddedUIEvent: true,
     };
 
-    static passiveSupported = false;
-    static onceSupported = false;
     static resizeObserver: ResizeObserver | undefined = undefined;
     static intersectionObserver: IntersectionObserver | undefined = undefined;
     static version = packageJSON.version;
@@ -50,26 +47,36 @@ export class EventManager {
     static add(target: EventTarget, types: EventHandlersEventMaps, callback: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean): void {
         for (const type of EventManager.toArray(types)) {
             if (!!EventManager.extendedEventKey(type)) {
-                EventManager.addExtendedEventListener(target, types, callback);
+                EventManager.addExtendedEventListener(target, types, callback, options);
             } else {
                 const eventType = EventType.get(target, type);
                 if (!eventType) {
                     continue;
                 }
-                target.addEventListener(type, callback, options);
+                EventManager.addEventListener(target, type, callback, options);
             }
-
-            EventManager.storeEventListener(target, type, callback);
         }
+    }
+
+    private static addEventListener(target: EventTarget, type: string, callback: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean): void {
+        new EventListenerRegister(target).addEventListener(type, EventManager.storeEventListener(target, type as EventHandlersEventMaps, callback, options), options)
+    }
+
+    private static removeEventListener(target: EventTarget, type: string, callback: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean): void {
+        EventManager.remove(target, type as EventHandlersEventMaps, callback, options);
+    }
+
+    private static dispatchEvent(target: EventTarget, event: Event) {
+        new EventListenerRegister(target).dispatchEvent(event);
     }
 
     private static extendedEventKey(type: string): string | undefined {
         return extendedEventMap[type as keyof ExtendedEventMap];
     }
 
-    private static addExtendedEventListener(target: EventTarget, types: EventHandlersEventMaps, callback: EventListenerOrEventListenerObject): void {
+    private static addExtendedEventListener(target: EventTarget, types: EventHandlersEventMaps, callback: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean): void {
         for (const type of EventManager.toArray(types)) {
-            target.addEventListener(type, callback);
+            EventManager.addEventListener(target, type, callback, options);
 
             switch (EventManager.extendedEventKey(type)) {
                 case 'mouselongpress':
@@ -103,26 +110,26 @@ export class EventManager {
         }
     }
 
-    static remove(target: EventTarget, types?: EventHandlersEventMaps, callback?: EventListenerOrEventListenerObject): void {
+    static remove(target: EventTarget, types?: EventHandlersEventMaps, callback?: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean): void {
         const listenerEventMap = EventManager.instance.generalEventInstance.get(target);
 
         if (!listenerEventMap) return;
 
         if (types) {
-            EventManager.removeEventListenerFromType(target, types, callback);
+            EventManager.removeEventListenerFromType(target, types, callback, options);
         } else {
             const keys = listenerEventMap.keys();
             let key = keys.next();
 
             while (!key.done) {
                 const types = key.value;
-                EventManager.removeEventListenerFromType(target, types, callback);
+                EventManager.removeEventListenerFromType(target, types, callback, options);
                 key = keys.next();
             }
         }
     }
 
-    private static removeEventListenerFromType(target: EventTarget, types: EventHandlersEventMaps, comparator: EventListenerOrEventListenerObject | undefined): void {
+    private static removeEventListenerFromType(target: EventTarget, types: EventHandlersEventMaps, comparator?: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean): void {
         const listenerEventMap = EventManager.instance.generalEventInstance.get(target);
 
         if (!listenerEventMap) return;
@@ -132,18 +139,25 @@ export class EventManager {
             const listeners = listenerEventMap.get(type);
 
             if (listeners) {
-                for (const listener of listeners) {
-                    const fn = EventManager.matchAndRemoveListener(target, type, comparator, listener);
-                    if (fn) {
-                        fns.push(fn);
+                const keys = listeners.keys();
+                let key = keys.next();
+
+                while (!key.done) {
+                    const value = listeners.get(key.value, options);
+                    if (value) {
+                        const fn = EventManager.matchAndRemoveListener(target, type, value, comparator, options);
+                        if (fn) {
+                            fns.push(fn);
+                        }
                     }
+                    key = keys.next();
                 }
 
                 for (const fn of fns) {
-                    listeners.splice(listeners.indexOf(fn), 1);
+                    listeners.delete(fn, options);
                 }
 
-                if (listeners.length === 0) {
+                if (listeners.size() === 0) {
                     listenerEventMap.delete(types);
                 }
             }
@@ -170,42 +184,49 @@ export class EventManager {
                 }
 
                 if (removeExtendedEvent) {
-                    EventManager.removeExtendedEvent(target, extendedEventKey as ExtendedEventType)
+                    EventManager.removeExtendedEvent(target, extendedEventKey as ExtendedEventType, options)
                 }
             }
         }
     }
 
-    private static matchAndRemoveListener(target: EventTarget, types: keyof ExtendedHTMLElementEventMap, comparator: EventListenerOrEventListenerObject | undefined, callback: EventListenerOrEventListenerObject): EventListenerOrEventListenerObject | undefined {
+    private static matchAndRemoveListener(target: EventTarget, types: keyof ExtendedHTMLElementEventMap, callback: EventListenerOrEventListenerObject, comparator?: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean): EventListenerOrEventListenerObject | undefined {
         if (!comparator || comparator === callback) {
-            return EventManager.removeEventListenerOne(target, types, callback);
+            return EventManager.removeEventListenerOne(target, types, callback, options);
         }
         return;
     }
 
-    private static removeEventListenerOne(target: EventTarget, types: keyof ExtendedHTMLElementEventMap, callback: EventListenerOrEventListenerObject): EventListenerOrEventListenerObject | undefined {
-        target.removeEventListener(types, callback);
-        EventManager.instance.generalEventInstance.get(target)?.delete(types);
+    private static removeEventListenerOne(target: EventTarget, types: keyof ExtendedHTMLElementEventMap, callback: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean): EventListenerOrEventListenerObject | undefined {
+        const newCallback = EventManager.instance.generalEventInstance.get(target)?.get(types)?.get(callback, options);
+        if (newCallback) {
+            new EventListenerRegister(target).removeEventListener(types, newCallback, options);
+            EventManager.instance.generalEventInstance.get(target)?.get(types)?.delete(callback, options);
+        }
         return callback;
     }
 
-    private static storeEventListener(target: EventTarget, types: EventHandlersEventMaps, callback: EventListenerOrEventListenerObject): void {
-        const listeners = [...EventManager.getOrCreateListenerMap(target, types), callback];
+    private static storeEventListener(target: EventTarget, types: EventHandlersEventMaps, callback: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean): EventListener {
+        const listeners = EventManager.getOrCreateListenerMap(target, types);
+
+        const newCallback = listeners.set(target, types, callback, options);
 
         EventManager.getOrCreateEventListenerEventMap(target).set(types, listeners);
+
+        return newCallback;
     }
 
-    private static getOrCreateListenerMap(target: EventTarget, types: EventHandlersEventMaps): EventListenerOrEventListenerObject[] {
+    private static getOrCreateListenerMap(target: EventTarget, types: EventHandlersEventMaps): EventListenerMap {
         const listenerEventMap = EventManager.getOrCreateEventListenerEventMap(target);
         const listeners = listenerEventMap.get(types);
 
         if (listeners) {
             return listeners;
         } else {
-            const newArray: EventListenerOrEventListenerObject[] = [];
-            listenerEventMap.set(types, newArray);
+            const newMap: EventListenerMap = new EventListenerMap();
+            listenerEventMap.set(types, newMap);
 
-            return newArray;
+            return newMap;
         }
     }
 
@@ -235,7 +256,7 @@ export class EventManager {
         return !!EventManager.getExtendedEvent(target)?.[extendedEvent];
     }
 
-    private static removeExtendedEvent(target: EventTarget, extendedEvent: ExtendedEventType): void {
+    private static removeExtendedEvent(target: EventTarget, extendedEvent: ExtendedEventType, options?: AddEventListenerOptionsOrBoolean): void {
         const extendedInstance = EventManager.getExtendedEvent(target);
 
         if (extendedInstance) {
@@ -245,7 +266,7 @@ export class EventManager {
                     const callbacks = implementation[type as keyof ExtendedEventImplementation | 'callback'];
                     if (callbacks instanceof Array) {
                         for (const callback of callbacks) {
-                            target.removeEventListener(type, callback);
+                            EventManager.removeEventListener(target, type, callback, options);
                         }
                     } else if (typeof callbacks === 'function') {
                         callbacks();
@@ -267,9 +288,9 @@ export class EventManager {
             let isMouseDown = false;
 
             const clear = () => {
-                target.removeEventListener('mousemove', onMouseMove);
-                target.removeEventListener('mouseup', onMouseUp);
-                target.removeEventListener('mouseleave', onMouseLeave);
+                EventManager.removeEventListener(target, 'mousemove', onMouseMove);
+                EventManager.removeEventListener(target, 'mouseup', onMouseUp);
+                EventManager.removeEventListener(target, 'mouseleave', onMouseLeave);
                 if (timeout) window.clearTimeout(timeout);
             };
 
@@ -277,27 +298,27 @@ export class EventManager {
                 isMouseDown = true;
                 mouseDownPosition = EventPosition.fromMouseEvent(event);
                 clear();
-                target.addEventListener('mousemove', onMouseMove, {passive: false});
+                EventManager.addEventListener(target, 'mousemove', onMouseMove, {passive: false});
 
                 timeout = window.setTimeout(() => {
-                    target.dispatchEvent(new ExtendedMouseEvent('mouselongpressstart', event));
-                    target.removeEventListener('mouseup', clear);
-                    target.removeEventListener('mouseleave', clear);
-                    target.addEventListener('mouseup', onMouseUp, {passive: false});
-                    target.addEventListener('mouseleave', onMouseLeave, {passive: false});
+                    EventManager.dispatchEvent(target, new ExtendedMouseEvent('mouselongpressstart', event));
+                    EventManager.removeEventListener(target, 'mouseup', clear);
+                    EventManager.removeEventListener(target, 'mouseleave', clear);
+                    EventManager.addEventListener(target, 'mouseup', onMouseUp, {passive: false});
+                    EventManager.addEventListener(target, 'mouseleave', onMouseLeave, {passive: false});
                 }, EventManager.options.mouseLongpressTimeRequired);
             };
 
             const onMouseUp = (event: Event) => {
                 if (mouseDownPosition) {
-                    target.dispatchEvent(new ExtendedMouseEvent('mouselongpressend', event, [new EventPath(mouseDownPosition, EventPosition.fromMouseEvent(event))]));
+                    EventManager.dispatchEvent(target, new ExtendedMouseEvent('mouselongpressend', event, [new EventPath(mouseDownPosition, EventPosition.fromMouseEvent(event))]));
                 }
                 clear();
             };
 
             const onMouseLeave = (event: Event) => {
                 if (mouseDownPosition) {
-                    target.dispatchEvent(new ExtendedMouseEvent('mouselongpressleave', event, [new EventPath(mouseDownPosition, EventPosition.fromMouseEvent(event))]));
+                    EventManager.dispatchEvent(target, new ExtendedMouseEvent('mouselongpressleave', event, [new EventPath(mouseDownPosition, EventPosition.fromMouseEvent(event))]));
                 }
                 clear();
             };
@@ -319,11 +340,11 @@ export class EventManager {
                         clear();
                     } else if (mouseDownPosition.timeDiff(mouseMovePosition) >= EventManager.options.mouseLongpressTimeRequired) {
                         if (EventManager.options.strict) {
-                            target.dispatchEvent(new ExtendedMouseEvent('mouselongpressmove', event, [new EventPath(mouseDownPosition!, mouseMovePosition)]));
+                            EventManager.dispatchEvent(target, new ExtendedMouseEvent('mouselongpressmove', event, [new EventPath(mouseDownPosition!, mouseMovePosition)]));
                         } else {
                             scheduler.scheduleTask(() => {
                                 if (isMouseDown) {
-                                    target.dispatchEvent(new ExtendedMouseEvent('mouselongpressmove', event, [new EventPath(mouseDownPosition!, mouseMovePosition)]));
+                                    EventManager.dispatchEvent(target, new ExtendedMouseEvent('mouselongpressmove', event, [new EventPath(mouseDownPosition!, mouseMovePosition)]));
                                 }
                             });
                         }
@@ -331,11 +352,11 @@ export class EventManager {
                 }
             };
 
-            target.addEventListener('mousedown', onMouseDown, {passive: false});
-            target.addEventListener('mouseup', clear, {passive: false});
-            target.addEventListener('mouseleave', clear, {passive: false});
-            target.addEventListener('mouseup', setMouseDownState, {passive: false});
-            target.addEventListener('mouseleave', setMouseDownState, {passive: false});
+            EventManager.addEventListener(target, 'mousedown', onMouseDown, {passive: false});
+            EventManager.addEventListener(target, 'mouseup', clear, {passive: false});
+            EventManager.addEventListener(target, 'mouseleave', clear, {passive: false});
+            EventManager.addEventListener(target, 'mouseup', setMouseDownState, {passive: false});
+            EventManager.addEventListener(target, 'mouseleave', setMouseDownState, {passive: false});
 
             EventManager.addExtendedEvent(target, 'mouselongpress', {
                 'mousedown': [onMouseDown],
@@ -357,9 +378,9 @@ export class EventManager {
             const clear = () => {
                 mousepanPath = [];
                 isGestureActive = false;
-                target.removeEventListener('mousemove', onMouseMove);
-                target.removeEventListener('mouseup', onMouseUp);
-                target.removeEventListener('mouseleave', onMouseLeave);
+                EventManager.removeEventListener(target, 'mousemove', onMouseMove);
+                EventManager.removeEventListener(target, 'mouseup', onMouseUp);
+                EventManager.removeEventListener(target, 'mouseleave', onMouseLeave);
             };
 
             const onMouseDown = (event: Event) => {
@@ -367,15 +388,15 @@ export class EventManager {
                 mouseDownPosition = EventPosition.fromMouseEvent(event);
                 previousPosition = mouseDownPosition;
                 clear();
-                target.addEventListener('mousemove', onMouseMove, {passive: false});
-                target.addEventListener('mouseup', onMouseUp, {passive: false});
-                target.addEventListener('mouseleave', onMouseLeave, {passive: false});
+                EventManager.addEventListener(target, 'mousemove', onMouseMove, {passive: false});
+                EventManager.addEventListener(target, 'mouseup', onMouseUp, {passive: false});
+                EventManager.addEventListener(target, 'mouseleave', onMouseLeave, {passive: false});
             };
 
             const onMouseUp = (event: Event) => {
                 if (isGestureActive && mouseDownPosition) {
                     parseDirection(event)
-                    target.dispatchEvent(new ExtendedMouseEvent('mousepanend', event, [new EventPath(mouseDownPosition, EventPosition.fromMouseEvent(event))]));
+                    EventManager.dispatchEvent(target, new ExtendedMouseEvent('mousepanend', event, [new EventPath(mouseDownPosition, EventPosition.fromMouseEvent(event))]));
                 }
                 clear();
             };
@@ -383,7 +404,7 @@ export class EventManager {
             const onMouseLeave = (event: Event) => {
                 if (isGestureActive && mouseDownPosition) {
                     parseDirection(event)
-                    target.dispatchEvent(new ExtendedMouseEvent('mousepanleave', event, [new EventPath(mouseDownPosition, EventPosition.fromMouseEvent(event))]));
+                    EventManager.dispatchEvent(target, new ExtendedMouseEvent('mousepanleave', event, [new EventPath(mouseDownPosition, EventPosition.fromMouseEvent(event))]));
                 }
                 clear();
             };
@@ -424,7 +445,7 @@ export class EventManager {
                         }
 
                         if (type) {
-                            target.dispatchEvent(new ExtendedMouseEvent(type, event, newMousepanPath));
+                            EventManager.dispatchEvent(target, new ExtendedMouseEvent(type, event, newMousepanPath));
                         }
                     }
                 }
@@ -440,7 +461,7 @@ export class EventManager {
                     previousPosition = mouseMovePosition;
 
                     if (length === 0 && path.distance > 0) {
-                        target.dispatchEvent(new ExtendedMouseEvent('mousepanstart', event, mousepanPath));
+                        EventManager.dispatchEvent(target, new ExtendedMouseEvent('mousepanstart', event, mousepanPath));
                     }
 
                     if (path.distance > 0) {
@@ -448,11 +469,11 @@ export class EventManager {
                         mousepanPath.push(path);
 
                         if (EventManager.options.strict) {
-                            target.dispatchEvent(new ExtendedMouseEvent('mousepanmove', event, mousepanPath));
+                            EventManager.dispatchEvent(target, new ExtendedMouseEvent('mousepanmove', event, mousepanPath));
                         } else {
                             scheduler.scheduleTask(() => {
                                 if (isMouseDown) {
-                                    target.dispatchEvent(new ExtendedMouseEvent('mousepanmove', event, mousepanPath));
+                                    EventManager.dispatchEvent(target, new ExtendedMouseEvent('mousepanmove', event, mousepanPath));
                                 }
                             });
                         }
@@ -460,9 +481,9 @@ export class EventManager {
                 }
             };
 
-            target.addEventListener('mousedown', onMouseDown, {passive: false});
-            target.addEventListener('mouseup', setMouseDownState, {passive: false});
-            target.addEventListener('mouseleave', setMouseDownState, {passive: false});
+            EventManager.addEventListener(target, 'mousedown', onMouseDown, {passive: false});
+            EventManager.addEventListener(target, 'mouseup', setMouseDownState, {passive: false});
+            EventManager.addEventListener(target, 'mouseleave', setMouseDownState, {passive: false});
 
             EventManager.addExtendedEvent(target, 'mousepan', {
                 'mousedown': [onMouseDown],
@@ -483,9 +504,9 @@ export class EventManager {
 
             const clear = () => {
                 isGestureActive = false;
-                target.removeEventListener('touchmove', onTouchMove);
-                target.removeEventListener('touchend', onTouchEnd);
-                target.removeEventListener('touchcancel', onTouchCancel);
+                EventManager.removeEventListener(target, 'touchmove', onTouchMove);
+                EventManager.removeEventListener(target, 'touchend', onTouchEnd);
+                EventManager.removeEventListener(target, 'touchcancel', onTouchCancel);
                 if (timeout) window.clearTimeout(timeout);
             };
 
@@ -496,16 +517,16 @@ export class EventManager {
                         touchStartPosition = EventPosition.fromTouchEvent(event, 0);
                         previousPosition = touchStartPosition;
                         clear();
-                        target.addEventListener('touchmove', onTouchMove, {passive: false});
+                        EventManager.addEventListener(target, 'touchmove', onTouchMove, {passive: false});
 
                         timeout = window.setTimeout(() => {
                             if (isTouchDown) {
                                 isGestureActive = true;
-                                target.dispatchEvent(new ExtendedTouchEvent('touchlongpressstart', event));
-                                target.removeEventListener('touchend', clear);
-                                target.removeEventListener('touchcancel', clear);
-                                target.addEventListener('touchend', onTouchEnd, {passive: false});
-                                target.addEventListener('touchcancel', onTouchCancel, {passive: false});
+                                EventManager.dispatchEvent(target, new ExtendedTouchEvent('touchlongpressstart', event));
+                                EventManager.removeEventListener(target, 'touchend', clear);
+                                EventManager.removeEventListener(target, 'touchcancel', clear);
+                                EventManager.addEventListener(target, 'touchend', onTouchEnd, {passive: false});
+                                EventManager.addEventListener(target, 'touchcancel', onTouchCancel, {passive: false});
                             }
                         }, EventManager.options.touchLongpressTimeRequired);
                     });
@@ -518,14 +539,14 @@ export class EventManager {
 
             const onTouchEnd = (event: Event) => {
                 if (touchStartPosition && previousPosition) {
-                    target.dispatchEvent(new ExtendedTouchEvent('touchlongpressend', event, [new EventPath(touchStartPosition, previousPosition)]));
+                    EventManager.dispatchEvent(target, new ExtendedTouchEvent('touchlongpressend', event, [new EventPath(touchStartPosition, previousPosition)]));
                 }
                 clear();
             };
 
             const onTouchCancel = (event: Event) => {
                 if (touchStartPosition && previousPosition) {
-                    target.dispatchEvent(new ExtendedTouchEvent('touchlongpresscancel', event, [new EventPath(touchStartPosition, previousPosition)]));
+                    EventManager.dispatchEvent(target, new ExtendedTouchEvent('touchlongpresscancel', event, [new EventPath(touchStartPosition, previousPosition)]));
                 }
                 clear();
             };
@@ -553,11 +574,11 @@ export class EventManager {
 
                             if (path.distance > 0) {
                                 if (EventManager.options.strict) {
-                                    target.dispatchEvent(new ExtendedTouchEvent('touchlongpressmove', event, [new EventPath(touchStartPosition!, touchMovePosition)]));
+                                    EventManager.dispatchEvent(target, new ExtendedTouchEvent('touchlongpressmove', event, [new EventPath(touchStartPosition!, touchMovePosition)]));
                                 } else {
                                     scheduler.scheduleTask(() => {
                                         if (isTouchDown) {
-                                            target.dispatchEvent(new ExtendedTouchEvent('touchlongpressmove', event, [new EventPath(touchStartPosition!, touchMovePosition)]));
+                                            EventManager.dispatchEvent(target, new ExtendedTouchEvent('touchlongpressmove', event, [new EventPath(touchStartPosition!, touchMovePosition)]));
                                         }
                                     });
                                 }
@@ -571,12 +592,12 @@ export class EventManager {
 
             const preventDefault = (event: Event) => event.preventDefault();
 
-            target.addEventListener('contextmenu', preventDefault, {passive: false});
-            target.addEventListener('touchstart', onTouchStart, {passive: false});
-            target.addEventListener('touchend', clear, {passive: false});
-            target.addEventListener('touchcancel', clear, {passive: false});
-            target.addEventListener('touchend', setTouchDownState, {passive: false});
-            target.addEventListener('touchcancel', setTouchDownState, {passive: false});
+            EventManager.addEventListener(target, 'contextmenu', preventDefault, {passive: false});
+            EventManager.addEventListener(target, 'touchstart', onTouchStart, {passive: false});
+            EventManager.addEventListener(target, 'touchend', clear, {passive: false});
+            EventManager.addEventListener(target, 'touchcancel', clear, {passive: false});
+            EventManager.addEventListener(target, 'touchend', setTouchDownState, {passive: false});
+            EventManager.addEventListener(target, 'touchcancel', setTouchDownState, {passive: false});
 
             EventManager.addExtendedEvent(target, 'touchlongpress', {
                 'contextmenu': [preventDefault],
@@ -599,9 +620,9 @@ export class EventManager {
             const clear = () => {
                 touchpanPath = [];
                 isGestureActive = false;
-                target.removeEventListener('touchmove', onTouchMove);
-                target.removeEventListener('touchend', onTouchEnd);
-                target.removeEventListener('touchcancel', onTouchCancel);
+                EventManager.removeEventListener(target, 'touchmove', onTouchMove);
+                EventManager.removeEventListener(target, 'touchend', onTouchEnd);
+                EventManager.removeEventListener(target, 'touchcancel', onTouchCancel);
             };
 
             const onTouchStart = (event: Event) => {
@@ -611,9 +632,9 @@ export class EventManager {
                         touchStartPosition = EventPosition.fromTouchEvent(event, 0);
                         previousPosition = touchStartPosition;
                         clear();
-                        target.addEventListener('touchmove', onTouchMove, {passive: false});
-                        target.addEventListener('touchend', onTouchEnd, {passive: false});
-                        target.addEventListener('touchcancel', onTouchCancel, {passive: false});
+                        EventManager.addEventListener(target, 'touchmove', onTouchMove, {passive: false});
+                        EventManager.addEventListener(target, 'touchend', onTouchEnd, {passive: false});
+                        EventManager.addEventListener(target, 'touchcancel', onTouchCancel, {passive: false});
                     });
                 } else if (isGestureActive) {
                     onTouchCancel(event);
@@ -623,14 +644,14 @@ export class EventManager {
             const onTouchEnd = (event: Event) => {
                 if (isGestureActive && touchStartPosition && previousPosition) {
                     parseDirection(event);
-                    target.dispatchEvent(new ExtendedTouchEvent('touchpanend', event, [new EventPath(touchStartPosition, previousPosition)]));
+                    EventManager.dispatchEvent(target, new ExtendedTouchEvent('touchpanend', event, [new EventPath(touchStartPosition, previousPosition)]));
                 }
                 clear();
             };
 
             const onTouchCancel = (event: Event) => {
                 if (isGestureActive && touchStartPosition && previousPosition) {
-                    target.dispatchEvent(new ExtendedTouchEvent('touchpancancel', event, [new EventPath(touchStartPosition, previousPosition)]));
+                    EventManager.dispatchEvent(target, new ExtendedTouchEvent('touchpancancel', event, [new EventPath(touchStartPosition, previousPosition)]));
                 }
                 clear();
             };
@@ -672,7 +693,7 @@ export class EventManager {
                         }
 
                         if (type) {
-                            target.dispatchEvent(new ExtendedMouseEvent(type, event, newTouchpanPath));
+                            EventManager.dispatchEvent(target, new ExtendedMouseEvent(type, event, newTouchpanPath));
                         }
                     }
                 }
@@ -688,7 +709,7 @@ export class EventManager {
                         previousPosition = touchMovePosition;
 
                         if (length === 0 && path.distance > 0) {
-                            target.dispatchEvent(new ExtendedTouchEvent('touchpanstart', event, touchpanPath));
+                            EventManager.dispatchEvent(target, new ExtendedTouchEvent('touchpanstart', event, touchpanPath));
                         }
 
                         if (path.distance > 0) {
@@ -696,11 +717,11 @@ export class EventManager {
                             touchpanPath.push(path);
 
                             if (EventManager.options.strict) {
-                                target.dispatchEvent(new ExtendedTouchEvent('touchpanmove', event, touchpanPath));
+                                EventManager.dispatchEvent(target, new ExtendedTouchEvent('touchpanmove', event, touchpanPath));
                             } else {
                                 scheduler.scheduleTask(() => {
                                     if (isTouchDown) {
-                                        target.dispatchEvent(new ExtendedTouchEvent('touchpanmove', event, touchpanPath));
+                                        EventManager.dispatchEvent(target, new ExtendedTouchEvent('touchpanmove', event, touchpanPath));
                                     }
                                 });
                             }
@@ -711,10 +732,10 @@ export class EventManager {
 
             const preventDefault = (event: Event) => event.preventDefault();
 
-            target.addEventListener('contextmenu', preventDefault, {passive: false});
-            target.addEventListener('touchstart', onTouchStart, {passive: false});
-            target.addEventListener('touchend', setTouchDownState, {passive: false});
-            target.addEventListener('touchcancel', setTouchDownState, {passive: false});
+            EventManager.addEventListener(target, 'contextmenu', preventDefault, {passive: false});
+            EventManager.addEventListener(target, 'touchstart', onTouchStart, {passive: false});
+            EventManager.addEventListener(target, 'touchend', setTouchDownState, {passive: false});
+            EventManager.addEventListener(target, 'touchcancel', setTouchDownState, {passive: false});
 
             EventManager.addExtendedEvent(target, 'touchpan', {
                 'contextmenu': [preventDefault],
@@ -740,9 +761,9 @@ export class EventManager {
                 previousPosition = [];
                 touchpinchPath = [];
                 isGestureActive = false;
-                target.removeEventListener('touchmove', onTouchMove);
-                target.removeEventListener('touchend', onTouchEnd);
-                target.removeEventListener('touchcancel', onTouchCancel);
+                EventManager.removeEventListener(target, 'touchmove', onTouchMove);
+                EventManager.removeEventListener(target, 'touchend', onTouchEnd);
+                EventManager.removeEventListener(target, 'touchcancel', onTouchCancel);
                 DefaultGesturePreventer.inactivePreventDefaultPinchGesture();
             };
 
@@ -759,23 +780,23 @@ export class EventManager {
                         }
                         previousPosition = touchStartPosition;
                         touchStartPath = new EventPath(touchStartPosition[0], touchStartPosition[1]);
-                        target.addEventListener('touchmove', onTouchMove, {passive: false});
-                        target.addEventListener('touchend', onTouchEnd, {passive: false});
-                        target.addEventListener('touchcancel', onTouchCancel, {passive: false});
+                        EventManager.addEventListener(target, 'touchmove', onTouchMove, {passive: false});
+                        EventManager.addEventListener(target, 'touchend', onTouchEnd, {passive: false});
+                        EventManager.addEventListener(target, 'touchcancel', onTouchCancel, {passive: false});
                     });
                 }
             };
 
             const onTouchEnd = (event: Event) => {
                 if (isGestureActive && touchStartPosition && previousPosition) {
-                    target.dispatchEvent(new ExtendedTouchEvent('touchpinchend', event, [new EventPath(EventPosition.center(touchStartPosition[0], touchStartPosition[1]), EventPosition.center(previousPosition[0], previousPosition[1]))]));
+                    EventManager.dispatchEvent(target, new ExtendedTouchEvent('touchpinchend', event, [new EventPath(EventPosition.center(touchStartPosition[0], touchStartPosition[1]), EventPosition.center(previousPosition[0], previousPosition[1]))]));
                 }
                 clear();
             };
 
             const onTouchCancel = (event: Event) => {
                 if (isGestureActive && touchStartPosition && previousPosition) {
-                    target.dispatchEvent(new ExtendedTouchEvent('touchpinchcancel', event, [new EventPath(EventPosition.center(touchStartPosition[0], touchStartPosition[1]), EventPosition.center(previousPosition[0], previousPosition[1]))]));
+                    EventManager.dispatchEvent(target, new ExtendedTouchEvent('touchpinchcancel', event, [new EventPath(EventPosition.center(touchStartPosition[0], touchStartPosition[1]), EventPosition.center(previousPosition[0], previousPosition[1]))]));
                 }
                 clear();
             };
@@ -803,7 +824,7 @@ export class EventManager {
                     previousPosition = touchMovePosition;
 
                     if (length === 0 && !touchStartPath.equals(path)) {
-                        target.dispatchEvent(new ExtendedTouchEvent('touchpinchstart', event, touchpinchPath));
+                        EventManager.dispatchEvent(target, new ExtendedTouchEvent('touchpinchstart', event, touchpinchPath));
                     }
 
                     if (!(length === 0 && touchStartPath.equals(path)) && !(length > 0 && touchpinchPath[length - 1].equals(path))) {
@@ -811,11 +832,11 @@ export class EventManager {
                         touchpinchPath.push(path);
 
                         if (EventManager.options.strict) {
-                            target.dispatchEvent(new ExtendedTouchEvent('touchpinchmove', event, touchpinchPath));
+                            EventManager.dispatchEvent(target, new ExtendedTouchEvent('touchpinchmove', event, touchpinchPath));
                         } else {
                             scheduler.scheduleTask(() => {
                                 if (isTouchDown) {
-                                    target.dispatchEvent(new ExtendedTouchEvent('touchpinchmove', event, touchpinchPath));
+                                    EventManager.dispatchEvent(target, new ExtendedTouchEvent('touchpinchmove', event, touchpinchPath));
                                 }
                             });
                         }
@@ -825,10 +846,10 @@ export class EventManager {
 
             const preventDefault = (event: Event) => event.preventDefault();
 
-            target.addEventListener('contextmenu', preventDefault, {passive: false});
-            target.addEventListener('touchstart', onTouchStart, {passive: false});
-            target.addEventListener('touchend', setTouchDownState, {passive: false});
-            target.addEventListener('touchcancel', setTouchDownState, {passive: false});
+            EventManager.addEventListener(target, 'contextmenu', preventDefault, {passive: false});
+            EventManager.addEventListener(target, 'touchstart', onTouchStart, {passive: false});
+            EventManager.addEventListener(target, 'touchend', setTouchDownState, {passive: false});
+            EventManager.addEventListener(target, 'touchcancel', setTouchDownState, {passive: false});
 
             EventManager.addExtendedEvent(target, 'touchpinch', {
                 'contextmenu': [preventDefault],
@@ -857,13 +878,13 @@ export class EventManager {
         }
 
         const onChange = (event: Event) => {
-            target.dispatchEvent(new ExtendedUIEvent('appearancechange', event, {appearance: getAppearance(event)}));
+            EventManager.dispatchEvent(target, new ExtendedUIEvent('appearancechange', event, {appearance: getAppearance(event)}));
         }
 
         matchPrefersColorSchemeDark.addEventListener('change', onChange, {passive: false});
 
         if (EventManager.options.callWhenAddedUIEvent) {
-            target.dispatchEvent(new ExtendedUIEvent('appearancechange', new MediaQueryListEvent('change'), {appearance: getAppearance(matchPrefersColorSchemeDark)}));
+            EventManager.dispatchEvent(target, new ExtendedUIEvent('appearancechange', new MediaQueryListEvent('change'), {appearance: getAppearance(matchPrefersColorSchemeDark)}));
         }
 
         EventManager.addExtendedEvent(matchPrefersColorSchemeDark, 'appearancechange', {
@@ -888,13 +909,13 @@ export class EventManager {
         }
 
         const onChange = (event: any) => {
-            target.dispatchEvent(new ExtendedUIEvent('orientationchange', event, {orientation: getOrientation(event)}));
+            EventManager.dispatchEvent(target, new ExtendedUIEvent('orientationchange', event, {orientation: getOrientation(event)}));
         }
 
         matchOrientationPortrait.addEventListener('change', onChange, {passive: false});
 
         if (EventManager.options.callWhenAddedUIEvent) {
-            target.dispatchEvent(new ExtendedUIEvent('appearancechange', new MediaQueryListEvent('change'), {appearance: getOrientation(matchOrientationPortrait)}));
+            EventManager.dispatchEvent(target, new ExtendedUIEvent('appearancechange', new MediaQueryListEvent('change'), {appearance: getOrientation(matchOrientationPortrait)}));
         }
 
         EventManager.addExtendedEvent(matchOrientationPortrait, 'orientationchange', {
@@ -907,7 +928,7 @@ export class EventManager {
 
         const element = target as Element;
         const onResize = (element: Element) => {
-            const dispatchEvent = () => target.dispatchEvent(new ExtendedUIEvent('resize', new Event('resize'), {size: new Size(element)}));
+            const dispatchEvent = () => EventManager.dispatchEvent(target, new ExtendedUIEvent('resize', new Event('resize'), {size: new Size(element)}));
 
             if (EventManager.options.strict) {
                 dispatchEvent();
@@ -917,7 +938,7 @@ export class EventManager {
         }
 
         let connect = false;
-        let observer;
+        let observer: ResizeObserver;
 
         if (EventManager.resizeObserver) {
             observer = EventManager.resizeObserver;
@@ -944,7 +965,7 @@ export class EventManager {
 
         const element = target as Element;
         const onIntersection = (entry: IntersectionObserverEntry) => {
-            const dispatchEvent = () => target.dispatchEvent(new ExtendedUIEvent('intersectionchange', new Event('intersectionchange'), {size: new Size(entry.intersectionRect), ration: entry.intersectionRatio}));
+            const dispatchEvent = () => EventManager.dispatchEvent(target, new ExtendedUIEvent('intersectionchange', new Event('intersectionchange'), {size: new Size(entry.intersectionRect), ration: entry.intersectionRatio}));
 
             if (EventManager.options.strict) {
                 dispatchEvent();
@@ -954,7 +975,7 @@ export class EventManager {
         }
 
         let connect = false;
-        let observer;
+        let observer: IntersectionObserver;
 
         if (EventManager.intersectionObserver) {
             observer = EventManager.intersectionObserver;
@@ -989,47 +1010,24 @@ export class EventManager {
 }
 
 (() => {
-    try {
-        const empty = () => {
-        };
-
-        const options = Object.create({}, {
-            passive: {
-                get() {
-                    EventManager.passiveSupported = true;
-                    return undefined;
-                }
-            },
-            once: {
-                get() {
-                    EventManager.onceSupported = true;
-                    return undefined;
-                }
-            },
-        });
-        window.addEventListener('test', empty, options);
-        window.removeEventListener('test', empty, options);
-    } catch (e) {
-    }
-
-    (window as any).ExtendedMouseEvent = ExtendedMouseEvent;
-    (window as any).ExtendedTouchEvent = ExtendedTouchEvent;
-    (window as any).ExtendedUIEvent = ExtendedUIEvent;
-    (window as any).EventManager = EventManager;
-    (window as any).EventPath = EventPath;
-    (window as any).EventPathList = EventPathList;
-    (window as any).EventPosition = EventPosition;
-    (window as any).Direction = Direction;
-    (window as any).Appearance = Appearance;
-    (window as any).Orientation = Orientation;
-    (window as any).Size = Size;
+    GlobalThis.ExtendedMouseEvent = ExtendedMouseEvent;
+    GlobalThis.ExtendedTouchEvent = ExtendedTouchEvent;
+    GlobalThis.ExtendedUIEvent = ExtendedUIEvent;
+    GlobalThis.EventManager = EventManager;
+    GlobalThis.EventPath = EventPath;
+    GlobalThis.EventPathList = EventPathList;
+    GlobalThis.EventPosition = EventPosition;
+    GlobalThis.Direction = Direction;
+    GlobalThis.Appearance = Appearance;
+    GlobalThis.Orientation = Orientation;
+    GlobalThis.Size = Size;
 
     EventTarget.prototype.addManagedEventListener = function (types: EventHandlersEventMaps, callback: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean) {
         EventManager.add(this, types, callback, options);
     };
 
-    EventTarget.prototype.removeManagedEventListener = function (types?: EventHandlersEventMaps, callback?: EventListenerOrEventListenerObject) {
-        EventManager.remove(this, types, callback);
+    EventTarget.prototype.removeManagedEventListener = function (types?: EventHandlersEventMaps, callback?: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean) {
+        EventManager.remove(this, types, callback, options);
     };
 })();
 
@@ -1050,6 +1048,6 @@ declare global {
 
     interface EventTarget {
         addManagedEventListener: (types: EventHandlersEventMaps, callback: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean) => void;
-        removeManagedEventListener: (types?: EventHandlersEventMaps, callback?: EventListenerOrEventListenerObject) => void;
+        removeManagedEventListener: (types?: EventHandlersEventMaps, callback?: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean) => void;
     }
 }
