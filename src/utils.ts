@@ -102,12 +102,12 @@ export class TaskScheduler {
 
         const start = now();
 
-        this.now = (
-            GlobalThis.performance?.now
-            || function () {
-                return now() - start;
+        this.now = () => {
+            if (GlobalThis.performance && GlobalThis.performance.now) {
+                return GlobalThis.performance.now()
             }
-        )
+            return now() - start;
+        }
 
         let lastTime = 0;
 
