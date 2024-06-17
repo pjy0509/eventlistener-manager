@@ -27,44 +27,44 @@ cdn
 ## 1. Add events
 #### Add single type event
 ```typescript
-EventManager.add(eventTarget, 'click', callback);
+EventManager.on(eventTarget, 'click', callback);
 // or
-eventTarget.addManagedEventListener('click', callback);
+eventTarget.on('click', callback);
 ``` 
 #### Add multiple type event
 ```typescript
-EventManager.add(eventTarget, ['click', 'mousedown'], callback);
+EventManager.on(eventTarget, ['click', 'mousedown'], callback);
 // or
-eventTarget.addManagedEventListener(['click', 'mousedown'], callback);
+eventTarget.on(['click', 'mousedown'], callback);
 ``` 
 ## 2. Remove event
 #### Remove single type event
 ```typescript
-EventManager.remove(eventTarget, 'click', callback);
+EventManager.off(eventTarget, 'click', callback);
 // or
-eventTarget.removeManagedEventListener('click', callback);
+eventTarget.off('click', callback);
 ``` 
 ```typescript
-EventManager.remove(eventTarget, 'click'); // remove all click event
+EventManager.off(eventTarget, 'click'); // remove all click event
 // or
-eventTarget.removeManagedEventListener('click');
+eventTarget.off('click');
 ``` 
 ```typescript
-EventManager.remove(eventTarget); // remove all event
+EventManager.off(eventTarget); // remove all event
 // or
-eventTarget.removeManagedEventListener();
+eventTarget.off();
 ``` 
 #### Remove multiple type event
 ```typescript
-EventManager.add(eventTarget, ['click', 'mousedown']); // remove all click, mousedown event
+EventManager.off(eventTarget, ['click', 'mousedown']); // remove all click, mousedown event
 // or
-eventTarget.removeManagedEventListener(['click', 'mousedown']);
+eventTarget.off(['click', 'mousedown']);
 ``` 
 ## 3. Add custom event
 ```typescript
-EventManager.add(eventTarget, ['mouselongpressstart'], callback);
+EventManager.on(eventTarget, ['mouselongpressstart'], callback);
 // or
-eventTarget.addManagedEventListener(['mouselongpressstart']);
+eventTarget.on(['mouselongpressstart']);
 ``` 
 ### Supported custom events
 Supported custom events include mouse long press, mouse pan, touch long press, touch pan, touch pinch, screen mode change, orientation change, any element resize, and any element intersection change.
@@ -128,7 +128,7 @@ EventManager.options.callWhenAddedUIEvent = true; // Call callback when extended
 ```
 ## 4. Support event type polyfill
 ```typescript
-EventManager.add(eventTarget, 'fullscreenchange', callback);
+EventManager.on(eventTarget, 'fullscreenchange', callback);
 
 // This actually works on firefox with specific version as follows: eventTarget.addEventListener('mozfullscreenchange', callback);
 ```

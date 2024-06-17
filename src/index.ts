@@ -44,7 +44,7 @@ export class EventManager {
     static intersectionObserver: IntersectionObserver | undefined = undefined;
     static version = packageJSON.version;
 
-    static add(target: EventTarget, types: EventHandlersEventMaps, callback: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean): void {
+    static on(target: EventTarget, types: EventHandlersEventMaps, callback: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean): void {
         for (const type of EventManager.toArray(types)) {
             if (!!EventManager.extendedEventKey(type)) {
                 EventManager.addExtendedEventListener(target, types, callback, options);
@@ -63,7 +63,7 @@ export class EventManager {
     }
 
     private static removeEventListener(target: EventTarget, type: string, callback: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean): void {
-        EventManager.remove(target, type as EventHandlersEventMaps, callback, options);
+        EventManager.off(target, type as EventHandlersEventMaps, callback, options);
     }
 
     private static dispatchEvent(target: EventTarget, event: Event) {
@@ -110,7 +110,7 @@ export class EventManager {
         }
     }
 
-    static remove(target: EventTarget, types?: EventHandlersEventMaps, callback?: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean): void {
+    static off(target: EventTarget, types?: EventHandlersEventMaps, callback?: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean): void {
         const listenerEventMap = EventManager.instance.generalEventInstance.get(target);
 
         if (!listenerEventMap) return;
@@ -1022,12 +1022,12 @@ export class EventManager {
     GlobalThis.Orientation = Orientation;
     GlobalThis.Size = Size;
 
-    EventTarget.prototype.addManagedEventListener = function (types: EventHandlersEventMaps, callback: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean) {
-        EventManager.add(this, types, callback, options);
+    EventTarget.prototype.on = function (types: EventHandlersEventMaps, callback: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean) {
+        EventManager.on(this, types, callback, options);
     };
 
-    EventTarget.prototype.removeManagedEventListener = function (types?: EventHandlersEventMaps, callback?: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean) {
-        EventManager.remove(this, types, callback, options);
+    EventTarget.prototype.off = function (types?: EventHandlersEventMaps, callback?: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean) {
+        EventManager.off(this, types, callback, options);
     };
 })();
 
@@ -1047,7 +1047,7 @@ declare global {
     }
 
     interface EventTarget {
-        addManagedEventListener: (types: EventHandlersEventMaps, callback: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean) => void;
-        removeManagedEventListener: (types?: EventHandlersEventMaps, callback?: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean) => void;
+        on: (types: EventHandlersEventMaps, callback: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean) => void;
+        off: (types?: EventHandlersEventMaps, callback?: EventListenerOrEventListenerObject, options?: AddEventListenerOptionsOrBoolean) => void;
     }
 }
