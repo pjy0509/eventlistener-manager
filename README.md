@@ -24,7 +24,7 @@ cdn
 | 1.0.32  | Polyfill 'addEventlistener', 'removeEventlistener', 'dispatchEvent', 'requestAnimationFrame', 'cancelAnimationFrame'  |
 | 1.0.33  | Polyfill 'WeakMap'                                                                                                    |
 | 1.0.34  | Fix 'requestAnimationFrame', 'cancelAnimationFrame' polyfill error                                                    |
-| 1.0.36  | Polyfill 'matchMedia'                                                                                                 |
+| 1.0.37  | Polyfill 'matchMedia'                                                                                                 |
 ## 1. Add events
 #### Add single type event
 ```typescript

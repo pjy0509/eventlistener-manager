@@ -138,17 +138,12 @@ export default (() => {
 
             if (!styleMedia) {
                 const style: any = document.createElement('style');
-                const script = document.getElementsByTagName('script')[0];
                 let info = null;
 
                 style.type = 'text/css';
                 style.setAttribute('data-match-media-query', 'true');
 
-                if (!script) {
-                    document.head.appendChild(style);
-                } else if (script.parentNode) {
-                    script.parentNode.insertBefore(style, script);
-                }
+                document.head.appendChild(style);
 
                 info = ('getComputedStyle' in window) && window.getComputedStyle(style) || style.currentStyle;
 
@@ -162,6 +157,7 @@ export default (() => {
                             style.textContent = text;
                         }
 
+                        document.head.removeChild(style);
                         return info.width === '1px';
                     }
                 };
