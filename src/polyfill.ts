@@ -15,7 +15,7 @@ export default (() => {
         const hasOwnProperty = Object.prototype.hasOwnProperty;
         const hasDefine = (() => {
             try {
-                return (Object.defineProperty({}, 'x', { value: 1 }) as any).x === 1;
+                return (Object.defineProperty({}, 'x', {value: 1}) as any).x === 1;
             } catch (e) {
                 return false;
             }
@@ -33,7 +33,7 @@ export default (() => {
             }
         };
 
-        GlobalThis.WeakMap = (function() {
+        GlobalThis.WeakMap = (function () {
             class WeakMap<K extends object, V> {
                 private readonly _id: string;
 
@@ -130,6 +130,48 @@ export default (() => {
         })();
 
         const isObject = (x: any): boolean => Object(x) === x;
+    }
+
+    if (!GlobalThis.matchMedia) {
+        GlobalThis.matchMedia = function (media: string) {
+            let styleMedia = (GlobalThis.styleMedia || GlobalThis.media);
+
+            if (!styleMedia) {
+                const style: any = document.createElement('style');
+                const script = document.getElementsByTagName('script')[0];
+                let info = null;
+
+                style.type = 'text/css';
+                style.setAttribute('data-match-media-query', 'true');
+
+                if (!script) {
+                    document.head.appendChild(style);
+                } else if (script.parentNode) {
+                    script.parentNode.insertBefore(style, script);
+                }
+
+                info = ('getComputedStyle' in window) && window.getComputedStyle(style) || style.currentStyle;
+
+                styleMedia = {
+                    matchMedium: function (media: string) {
+                        const text = '@media ' + media + '{ [data-match-media-query] { width: 1px; } }';
+
+                        if (style.styleSheet) {
+                            style.styleSheet.cssText = text;
+                        } else {
+                            style.textContent = text;
+                        }
+
+                        return info.width === '1px';
+                    }
+                };
+            }
+
+            return {
+                matches: styleMedia.matchMedium(media),
+                media: media
+            };
+        }
     }
 
     return undefined;

@@ -284,14 +284,14 @@ export class EventManager {
     private static addMouseLongpressEvent(target: EventTarget): void {
         if (!EventManager.hasExtendedEventImplementation(target, 'mouselongpress')) {
             let mouseDownPosition: EventPosition | undefined;
-            let timeout: number | undefined;
+            let timeout: NodeJS.Timeout | string | number | undefined;
             let isMouseDown = false;
 
             const clear = () => {
                 EventManager.removeEventListener(target, 'mousemove', onMouseMove);
                 EventManager.removeEventListener(target, 'mouseup', onMouseUp);
                 EventManager.removeEventListener(target, 'mouseleave', onMouseLeave);
-                if (timeout) window.clearTimeout(timeout);
+                if (timeout) clearTimeout(timeout);
             };
 
             const onMouseDown = (event: Event) => {
@@ -300,7 +300,7 @@ export class EventManager {
                 clear();
                 EventManager.addEventListener(target, 'mousemove', onMouseMove, {passive: false});
 
-                timeout = window.setTimeout(() => {
+                timeout = setTimeout(() => {
                     EventManager.dispatchEvent(target, new ExtendedMouseEvent('mouselongpressstart', event));
                     EventManager.removeEventListener(target, 'mouseup', clear);
                     EventManager.removeEventListener(target, 'mouseleave', clear);
@@ -498,7 +498,7 @@ export class EventManager {
         if (!EventManager.hasExtendedEventImplementation(target, 'touchlongpress')) {
             let touchStartPosition: EventPosition | undefined;
             let previousPosition: EventPosition | undefined;
-            let timeout: number | undefined;
+            let timeout: NodeJS.Timeout | string | number | undefined;
             let isGestureActive = false;
             let isTouchDown = false;
 
@@ -507,7 +507,7 @@ export class EventManager {
                 EventManager.removeEventListener(target, 'touchmove', onTouchMove);
                 EventManager.removeEventListener(target, 'touchend', onTouchEnd);
                 EventManager.removeEventListener(target, 'touchcancel', onTouchCancel);
-                if (timeout) window.clearTimeout(timeout);
+                if (timeout) clearTimeout(timeout);
             };
 
             const onTouchStart = (event: Event) => {
@@ -519,7 +519,7 @@ export class EventManager {
                         clear();
                         EventManager.addEventListener(target, 'touchmove', onTouchMove, {passive: false});
 
-                        timeout = window.setTimeout(() => {
+                        timeout = setTimeout(() => {
                             if (isTouchDown) {
                                 isGestureActive = true;
                                 EventManager.dispatchEvent(target, new ExtendedTouchEvent('touchlongpressstart', event));
@@ -862,11 +862,6 @@ export class EventManager {
     }
 
     private static addAppearanceChange(target: EventTarget): void {
-        const global = window as any;
-        const matchMedia = global.matchMedia || global.msMatchMedia;
-
-        if (!matchMedia) return;
-
         const matchPrefersColorSchemeDark = matchMedia('(prefers-color-scheme: dark)');
 
         const getAppearance = (event: any) => {
@@ -893,11 +888,6 @@ export class EventManager {
     }
 
     private static addOrientationChange(target: EventTarget): void {
-        const global = window as any;
-        const matchMedia = global.matchMedia || global.msMatchMedia;
-
-        if (!matchMedia) return;
-
         const matchOrientationPortrait = matchMedia('(orientation: portrait)');
 
         const getOrientation = (event: any) => {
