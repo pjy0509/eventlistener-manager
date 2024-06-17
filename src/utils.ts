@@ -1,5 +1,4 @@
 import {AddEventListenerOptionsOrBoolean, EventHandlersEventMaps} from "./interfacecs";
-import {EventManager} from "./index";
 
 type ViewportContentMap = { [K: string]: string };
 
