@@ -1,6 +1,6 @@
 {
   "name": "eventlistener-manager",
-  "version": "1.0.37",
+  "version": "1.0.39",
   "description": "The EventManager is capable of handling both native and custom events seamlessly, providing a robust solution for event management in complex applications.",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -10,16 +10,16 @@
   "license": "MIT",
   "type": "module",
   "main": "dist/index.cjs",
-  "require": "./dist/index.cjs",
+  "require": "dist/index.cjs",
   "module": "dist/index.mjs",
-  "umd": "./dist/index.umd.js",
-  "types": "dist/index.d.ts",
+  "umd": "dist/index.umd.js",
+  "types": "dist/src/index.d.ts",
   "exports": {
     ".": {
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs",
       "umd": "./dist/index.umd.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/src/index.d.ts"
     }
   },
   "repository": {
