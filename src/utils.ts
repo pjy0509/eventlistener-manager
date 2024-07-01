@@ -178,22 +178,115 @@ export class TaskScheduler {
     }
 }
 
+export class EventListenerRegister {
+    static passiveSupported: Map<Function, boolean> = new Map();
+    static onceSupported: Map<Function, boolean> = new Map();
+
+    private readonly target: any
+
+    addEventListener = (type: string, callback: any, options?: any) => {
+        if ('addEventListener' in this.target) {
+            this.target.addEventListener(type, callback, options);
+            return;
+        }
+        if ('attachEvent' in this.target) {
+            this.target.attachEvent('on' + type, callback);
+            return;
+        }
+        if ('addListener' in this.target) {
+            this.target.addListener(callback);
+            return;
+        }
+        return;
+    }
+
+    removeEventListener = (type: string, callback: any, options?: any) => {
+        if ('removeEventListener' in this.target) {
+            this.target.removeEventListener(type, callback, options);
+            return;
+        }
+        if ('detachEvent' in this.target) {
+            this.target.detachEvent('on' + type, callback);
+            return;
+        }
+        if ('removeListener' in this.target) {
+            this.target.removeListener(callback);
+            return;
+        }
+        return () => {
+        };
+    }
+
+    dispatchEvent = (event: Event) => {
+        if ('dispatchEvent' in this.target) {
+            this.target.dispatchEvent(event);
+            return;
+        }
+        if ('fireEvent' in this.target) {
+            this.target.fireEvent('on' + event.type);
+            return;
+        }
+        return;
+    }
+
+    constructor(target: EventTarget) {
+        this.target = target;
+        this.checkSupportedOptions(target);
+    }
+
+    private checkSupportedOptions(target: EventTarget) {
+        if (EventListenerRegister.onceSupported.get(target.constructor) === undefined || EventListenerRegister.passiveSupported.get(target.constructor) === undefined) {
+            EventListenerRegister.passiveSupported.set(target.constructor, false);
+            EventListenerRegister.onceSupported.set(target.constructor, false);
+
+            try {
+                const empty = () => {
+                };
+
+                const options = Object.create({}, {
+                    passive: {
+                        get() {
+                            EventListenerRegister.passiveSupported.set(target.constructor, true);
+                            return undefined;
+                        }
+                    },
+                    once: {
+                        get() {
+                            EventListenerRegister.onceSupported.set(target.constructor, true);
+                            return undefined;
+                        }
+                    },
+                });
+
+                this.addEventListener('test', empty, options);
+                this.removeEventListener('test', empty, options);
+            } catch (e) {
+            }
+        }
+    }
+}
+
 export class DefaultGesturePreventer {
     private static styleSheet: CSSStyleSheet;
     private static meta: WeakMap<HTMLMetaElement, ViewportContentMap> = new WeakMap();
     private static isActivePreventDefaultPinchGesture = false;
     private static isActivePreventDefaultPanGesture = false;
     private static isActivePreventDefaultSelectGesture = false;
-    private static preventDefault = (event: Event) => event.preventDefault();
+    private static preventDefault = (event: Event) => {
+        if (!('cancelable' in event) || event.cancelable) {
+            event.preventDefault();
+        }
+    }
     private static emptyPromise = new Promise(() => {
     });
+    static documentEventRegister = new EventListenerRegister(document);
 
     static activePreventDefaultPinchGesture() {
         if (DefaultGesturePreventer.isActivePreventDefaultPinchGesture) return DefaultGesturePreventer.emptyPromise;
 
         DefaultGesturePreventer.isActivePreventDefaultPinchGesture = true;
-        document.addEventListener('touchmove', DefaultGesturePreventer.preventDefault, {passive: false});
-        document.addEventListener('touchstart', DefaultGesturePreventer.preventDefault, {passive: false});
+        DefaultGesturePreventer.documentEventRegister.addEventListener('touchmove', DefaultGesturePreventer.preventDefault, {passive: false});
+        DefaultGesturePreventer.documentEventRegister.addEventListener('touchstart', DefaultGesturePreventer.preventDefault, {passive: false});
 
         return new Promise(async resolve => {
             const metas: NodeListOf<HTMLMetaElement> = document.querySelectorAll<HTMLMetaElement>('meta[name="viewport"]');
@@ -227,8 +320,8 @@ export class DefaultGesturePreventer {
         if (!DefaultGesturePreventer.isActivePreventDefaultPinchGesture) return;
 
         DefaultGesturePreventer.isActivePreventDefaultPinchGesture = false;
-        document.removeEventListener('touchmove', DefaultGesturePreventer.preventDefault);
-        document.removeEventListener('touchstart', DefaultGesturePreventer.preventDefault);
+        DefaultGesturePreventer.documentEventRegister.removeEventListener('touchmove', DefaultGesturePreventer.preventDefault);
+        DefaultGesturePreventer.documentEventRegister.removeEventListener('touchstart', DefaultGesturePreventer.preventDefault);
 
         document.querySelectorAll<HTMLMetaElement>('meta[name="viewport"]')
             .forEach(meta => {
@@ -250,7 +343,7 @@ export class DefaultGesturePreventer {
         DefaultGesturePreventer.isActivePreventDefaultPanGesture = true;
 
         return new Promise(resolve => {
-            document.addEventListener('touchstart', DefaultGesturePreventer.preventDefault, {passive: false});
+            DefaultGesturePreventer.documentEventRegister.addEventListener('touchstart', DefaultGesturePreventer.preventDefault, {passive: false});
             setTimeout(resolve);
         });
     }
@@ -259,18 +352,46 @@ export class DefaultGesturePreventer {
         if (!DefaultGesturePreventer.isActivePreventDefaultPanGesture) return;
 
         DefaultGesturePreventer.isActivePreventDefaultPanGesture = false;
-
-        document.removeEventListener('touchstart', DefaultGesturePreventer.preventDefault);
+        DefaultGesturePreventer.documentEventRegister.removeEventListener('touchstart', DefaultGesturePreventer.preventDefault);
     }
 
     static activePreventDefaultSelectGesture() {
         if (DefaultGesturePreventer.isActivePreventDefaultSelectGesture) return DefaultGesturePreventer.emptyPromise;
 
         DefaultGesturePreventer.isActivePreventDefaultSelectGesture = true;
-        document.addEventListener('touchstart', DefaultGesturePreventer.preventDefault, {passive: false});
+        DefaultGesturePreventer.documentEventRegister.addEventListener('touchstart', DefaultGesturePreventer.preventDefault, {passive: false});
 
         return new Promise(resolve => {
-            DefaultGesturePreventer.getStyleSheet().insertRule('html{-webkit-touch-callout:none;-webkit-user-select:none;-webkit-tap-highlight-color:rgba(0,0,0,0);-khtml-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;}');
+            DefaultGesturePreventer.getStyleSheet().insertRule(
+                'html{' +
+                '-webkit-touch-callout: none;' +
+
+                '-webkit-tap-highlight-color: rgba(0, 0, 0, 0);' +
+
+                'outline-style: none;' +
+
+                '-webkit-user-select: none;' +
+                '-khtml-user-select: none;' +
+                '-moz-user-select: none;' +
+                '-ms-user-select: none;' +
+                '-o-user-select: none;' +
+                'user-select: none;' +
+
+                '-webkit-user-drag: none;' +
+                '-khtml-user-drag: none;' +
+                '-moz-user-drag: none;' +
+                '-ms-user-drag: none;' +
+                '-o-user-drag: none;' +
+                'user-drag: none;' +
+
+                '-webkit-app-region: none;' +
+                '-khtml-app-region: none;' +
+                '-moz-app-region: none;' +
+                '-ms-app-region: none;' +
+                '-o-app-region: none;' +
+                'app-region: none;' +
+                '}'
+            );
             setTimeout(resolve);
         });
     }
@@ -279,7 +400,7 @@ export class DefaultGesturePreventer {
         if (!DefaultGesturePreventer.isActivePreventDefaultSelectGesture) return;
 
         DefaultGesturePreventer.isActivePreventDefaultSelectGesture = false;
-        document.removeEventListener('touchstart', DefaultGesturePreventer.preventDefault);
+        DefaultGesturePreventer.documentEventRegister.removeEventListener('touchstart', DefaultGesturePreventer.preventDefault);
 
         try {
             DefaultGesturePreventer.getStyleSheet().deleteRule(0);
@@ -406,92 +527,3 @@ export class EventListenerMap {
         return options;
     }
 }
-
-export class EventListenerRegister {
-    static passiveSupported: Map<Function, boolean> = new Map();
-    static onceSupported: Map<Function, boolean> = new Map();
-
-    private readonly target: any
-
-    addEventListener = (type: string, callback: any, options?: any) => {
-        if ('addEventListener' in this.target) {
-            this.target.addEventListener(type, callback, options);
-            return;
-        }
-        if ('attachEvent' in this.target) {
-            this.target.attachEvent('on' + type, callback);
-            return;
-        }
-        if ('addListener' in this.target) {
-            this.target.addListener(callback);
-            return;
-        }
-        return;
-    }
-
-    removeEventListener = (type: string, callback: any, options?: any) => {
-        if ('removeEventListener' in this.target) {
-            this.target.removeEventListener(type, callback, options);
-            return;
-        }
-        if ('detachEvent' in this.target) {
-            this.target.detachEvent('on' + type, callback);
-            return;
-        }
-        if ('removeListener' in this.target) {
-            this.target.removeListener(callback);
-            return;
-        }
-        return () => {
-        };
-    }
-
-    dispatchEvent = (event: Event) => {
-        if ('dispatchEvent' in this.target) {
-            this.target.dispatchEvent(event);
-            return;
-        }
-        if ('fireEvent' in this.target) {
-            this.target.fireEvent('on' + event.type);
-            return;
-        }
-        return;
-    }
-
-    constructor(target: EventTarget) {
-        this.target = target;
-        this.checkSupportedOptions(target);
-    }
-
-    private checkSupportedOptions(target: EventTarget) {
-        if (EventListenerRegister.onceSupported.get(target.constructor) === undefined || EventListenerRegister.passiveSupported.get(target.constructor) === undefined) {
-            EventListenerRegister.passiveSupported.set(target.constructor, false);
-            EventListenerRegister.onceSupported.set(target.constructor, false);
-
-            try {
-                const empty = () => {
-                };
-
-                const options = Object.create({}, {
-                    passive: {
-                        get() {
-                            EventListenerRegister.passiveSupported.set(target.constructor, true);
-                            return undefined;
-                        }
-                    },
-                    once: {
-                        get() {
-                            EventListenerRegister.onceSupported.set(target.constructor, true);
-                            return undefined;
-                        }
-                    },
-                });
-
-                this.addEventListener('test', empty, options);
-                this.removeEventListener('test', empty, options);
-            } catch (e) {
-            }
-        }
-    }
-}
-

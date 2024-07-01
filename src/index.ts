@@ -395,7 +395,7 @@ export class EventManager {
 
             const onMouseUp = (event: Event) => {
                 if (isGestureActive && mouseDownPosition) {
-                    parseDirection(event)
+                    parseDirection(event);
                     EventManager.dispatchEvent(target, new ExtendedMouseEvent('mousepanend', event, [new EventPath(mouseDownPosition, EventPosition.fromMouseEvent(event))]));
                 }
                 clear();
@@ -403,7 +403,7 @@ export class EventManager {
 
             const onMouseLeave = (event: Event) => {
                 if (isGestureActive && mouseDownPosition) {
-                    parseDirection(event)
+                    parseDirection(event);
                     EventManager.dispatchEvent(target, new ExtendedMouseEvent('mousepanleave', event, [new EventPath(mouseDownPosition, EventPosition.fromMouseEvent(event))]));
                 }
                 clear();
@@ -590,7 +590,11 @@ export class EventManager {
                 }
             };
 
-            const preventDefault = (event: Event) => event.preventDefault();
+            const preventDefault = (event: Event) => {
+                if (!('cancelable' in event) || event.cancelable) {
+                    event.preventDefault();
+                }
+            }
 
             EventManager.addEventListener(target, 'contextmenu', preventDefault, {passive: false});
             EventManager.addEventListener(target, 'touchstart', onTouchStart, {passive: false});
@@ -627,15 +631,14 @@ export class EventManager {
 
             const onTouchStart = (event: Event) => {
                 if (event instanceof TouchEvent && event.touches.length === 1) {
-                    DefaultGesturePreventer.activePreventDefaultPanGesture().then(() => {
-                        isTouchDown = true;
-                        touchStartPosition = EventPosition.fromTouchEvent(event, 0);
-                        previousPosition = touchStartPosition;
-                        clear();
-                        EventManager.addEventListener(target, 'touchmove', onTouchMove, {passive: false});
-                        EventManager.addEventListener(target, 'touchend', onTouchEnd, {passive: false});
-                        EventManager.addEventListener(target, 'touchcancel', onTouchCancel, {passive: false});
-                    });
+                    DefaultGesturePreventer.activePreventDefaultPanGesture().then();
+                    isTouchDown = true;
+                    touchStartPosition = EventPosition.fromTouchEvent(event, 0);
+                    previousPosition = touchStartPosition;
+                    clear();
+                    EventManager.addEventListener(target, 'touchmove', onTouchMove, {passive: false});
+                    EventManager.addEventListener(target, 'touchend', onTouchEnd, {passive: false});
+                    EventManager.addEventListener(target, 'touchcancel', onTouchCancel, {passive: false});
                 } else if (isGestureActive) {
                     onTouchCancel(event);
                 }
@@ -730,7 +733,11 @@ export class EventManager {
                 }
             };
 
-            const preventDefault = (event: Event) => event.preventDefault();
+            const preventDefault = (event: Event) => {
+                if (!('cancelable' in event) || event.cancelable) {
+                    event.preventDefault();
+                }
+            }
 
             EventManager.addEventListener(target, 'contextmenu', preventDefault, {passive: false});
             EventManager.addEventListener(target, 'touchstart', onTouchStart, {passive: false});
@@ -769,21 +776,21 @@ export class EventManager {
 
             const onTouchStart = (event: Event) => {
                 if (event instanceof TouchEvent && event.touches.length > 1) {
-                    DefaultGesturePreventer.activePreventDefaultPinchGesture().then(() => {
-                        const touchLength = event.touches.length;
+                    DefaultGesturePreventer.activePreventDefaultPinchGesture().then();
 
-                        isTouchDown = true;
-                        clear();
+                    const touchLength = event.touches.length;
 
-                        for (let i = 0; i < touchLength; i++) {
-                            touchStartPosition.push(EventPosition.fromTouchEvent(event, i));
-                        }
-                        previousPosition = touchStartPosition;
-                        touchStartPath = new EventPath(touchStartPosition[0], touchStartPosition[1]);
-                        EventManager.addEventListener(target, 'touchmove', onTouchMove, {passive: false});
-                        EventManager.addEventListener(target, 'touchend', onTouchEnd, {passive: false});
-                        EventManager.addEventListener(target, 'touchcancel', onTouchCancel, {passive: false});
-                    });
+                    isTouchDown = true;
+                    clear();
+
+                    for (let i = 0; i < touchLength; i++) {
+                        touchStartPosition.push(EventPosition.fromTouchEvent(event, i));
+                    }
+                    previousPosition = touchStartPosition;
+                    touchStartPath = new EventPath(touchStartPosition[0], touchStartPosition[1]);
+                    EventManager.addEventListener(target, 'touchmove', onTouchMove, {passive: false});
+                    EventManager.addEventListener(target, 'touchend', onTouchEnd, {passive: false});
+                    EventManager.addEventListener(target, 'touchcancel', onTouchCancel, {passive: false});
                 }
             };
 
@@ -844,7 +851,11 @@ export class EventManager {
                 }
             };
 
-            const preventDefault = (event: Event) => event.preventDefault();
+            const preventDefault = (event: Event) => {
+                if (!('cancelable' in event) || event.cancelable) {
+                    event.preventDefault();
+                }
+            }
 
             EventManager.addEventListener(target, 'contextmenu', preventDefault, {passive: false});
             EventManager.addEventListener(target, 'touchstart', onTouchStart, {passive: false});
