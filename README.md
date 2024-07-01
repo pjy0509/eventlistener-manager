@@ -17,14 +17,15 @@ cdn
 ## Report errors and suggestions
 ### [Gmail](mailto:qkrwnss0509@gmail.com?subject=Report_errors_and_suggestions)
 ## Change log
-| Version | Log                                                                                                                   |
-|---------|-----------------------------------------------------------------------------------------------------------------------|
-| 1.0.25  | Support CDN                                                                                                           |
-| 1.0.27  | Add 'appearancechange', 'orientationchange', 'resize', 'intersectionchange' eventlistener                             |
-| 1.0.32  | Polyfill 'addEventlistener', 'removeEventlistener', 'dispatchEvent', 'requestAnimationFrame', 'cancelAnimationFrame'  |
-| 1.0.33  | Polyfill 'WeakMap'                                                                                                    |
-| 1.0.34  | Fix 'requestAnimationFrame', 'cancelAnimationFrame' polyfill error                                                    |
-| 1.0.37  | Polyfill 'matchMedia'                                                                                                 |
+| Version | Log                                                                                                                  |
+|---------|----------------------------------------------------------------------------------------------------------------------|
+| 1.0.25  | Support CDN                                                                                                          |
+| 1.0.27  | Add 'appearancechange', 'orientationchange', 'resize', 'intersectionchange' eventlistener                            |
+| 1.0.32  | Polyfill 'addEventlistener', 'removeEventlistener', 'dispatchEvent', 'requestAnimationFrame', 'cancelAnimationFrame' |
+| 1.0.33  | Polyfill 'WeakMap'                                                                                                   |
+| 1.0.34  | Fix 'requestAnimationFrame', 'cancelAnimationFrame' polyfill error                                                   |
+| 1.0.37  | Polyfill 'matchMedia'                                                                                                |
+| 1.0.45  | Improve situations where Custom events are not released in special cases                                             |
 ## 1. Add events
 #### Add single type event
 ```typescript
